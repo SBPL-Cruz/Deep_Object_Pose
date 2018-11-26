@@ -4,7 +4,7 @@
 # https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode
 
 """
-This file opens an RGB camera and publishes images via ROS. 
+This file opens an RGB camera and publishes images via ROS.
 It uses OpenCV to capture from camera 0.
 """
 
@@ -25,14 +25,14 @@ cap = cv2.VideoCapture(cam_index)
 if not cap.isOpened():
     print("ERROR:  Unable to open camera for capture.  Is camera plugged in?")
     exit(1)
-    
+
 def publish_images(freq=5):
     rospy.init_node('dope_webcam_rgb_raw', anonymous=True)
     images_out = rospy.Publisher(topic, Image_msg, queue_size=10)
     rate = rospy.Rate(freq)
 
     print ("Publishing images from camera {} to topic '{}'...".format(
-            cam_index, 
+            cam_index,
             topic
             )
     )
@@ -47,9 +47,8 @@ def publish_images(freq=5):
         rate.sleep()
 
 if __name__ == "__main__":
-    
+
     try :
         publish_images()
     except rospy.ROSInterruptException:
         pass
-

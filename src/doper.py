@@ -5,13 +5,13 @@
 # https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode
 
 """
-This file starts a ROS node to run DOPE, 
+This file starts a ROS node to run DOPE,
 listening to an image topic and publishing poses.
 """
 
 from __future__ import print_function
 import yaml
-import sys 
+import sys
 
 import numpy as np
 import cv2
@@ -22,6 +22,9 @@ from std_msgs.msg import String, Empty
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image as ImageSensor_msg
 from geometry_msgs.msg import PoseStamped
+from dope.msg import PoseCNNMsg
+from std_msgs.msg import String
+# from sensor_msgs.msg import Image
 
 from PIL import Image
 from PIL import ImageDraw
@@ -60,19 +63,19 @@ def DrawDot(point, pointColor, pointRadius):
     global g_draw
     if point is not None:
         xy = [
-            point[0]-pointRadius, 
-            point[1]-pointRadius, 
-            point[0]+pointRadius, 
+            point[0]-pointRadius,
+            point[1]-pointRadius,
+            point[0]+pointRadius,
             point[1]+pointRadius
         ]
-        g_draw.ellipse(xy, 
-            fill=pointColor, 
+        g_draw.ellipse(xy,
+            fill=pointColor,
             outline=pointColor
         )
 
 def DrawCube(points, color=(255, 0, 0)):
     '''
-    Draws cube with a thick solid line across 
+    Draws cube with a thick solid line across
     the front top edge and an X on the top face.
     '''
 
@@ -83,13 +86,13 @@ def DrawCube(points, color=(255, 0, 0)):
     DrawLine(points[1], points[2], color, lineWidthForDrawing)
     DrawLine(points[3], points[2], color, lineWidthForDrawing)
     DrawLine(points[3], points[0], color, lineWidthForDrawing)
-    
+
     # draw back
     DrawLine(points[4], points[5], color, lineWidthForDrawing)
     DrawLine(points[6], points[5], color, lineWidthForDrawing)
     DrawLine(points[6], points[7], color, lineWidthForDrawing)
     DrawLine(points[4], points[7], color, lineWidthForDrawing)
-    
+
     # draw sides
     DrawLine(points[0], points[4], color, lineWidthForDrawing)
     DrawLine(points[7], points[3], color, lineWidthForDrawing)
@@ -100,7 +103,7 @@ def DrawCube(points, color=(255, 0, 0)):
     DrawDot(points[0], pointColor=color, pointRadius = 4)
     DrawDot(points[1], pointColor=color, pointRadius = 4)
 
-    # draw x on the top 
+    # draw x on the top
     DrawLine(points[0], points[5], color, lineWidthForDrawing)
     DrawLine(points[1], points[4], color, lineWidthForDrawing)
 
@@ -143,11 +146,11 @@ def run_dope_node(params, freq=5):
     for model in params['weights']:
         models[model] =\
             ModelData(
-                model, 
+                model,
                 g_path2package + "/weights/" + params['weights'][model]
             )
         models[model].load_net_model()
-        
+
         draw_colors[model] = \
             tuple(params["draw_colors"][model])
         pnp_solvers[model] = \
@@ -159,37 +162,39 @@ def run_dope_node(params, freq=5):
             )
         pubs[model] = \
             rospy.Publisher(
-                '{}/pose_{}'.format(params['topic_publishing'], model), 
-                PoseStamped, 
+                '{}/pose_{}'.format(params['topic_publishing'], model),
+                PoseStamped,
                 queue_size=10
             )
         pub_dimension[model] = \
             rospy.Publisher(
                 '{}/dimension_{}'.format(params['topic_publishing'], model),
-                String, 
+                String,
                 queue_size=10
             )
 
     # Start ROS publisher
     pub_rgb_dope_points = \
         rospy.Publisher(
-            params['topic_publishing']+"/rgb_points", 
-            ImageSensor_msg, 
+            params['topic_publishing']+"/rgb_points",
+            ImageSensor_msg,
             queue_size=10
         )
-    
+
     # Starts ROS listener
     rospy.Subscriber(
-        topic_cam, 
-        ImageSensor_msg, 
+        topic_cam,
+        ImageSensor_msg,
         __image_callback
     )
+
+    posecnn_pub = rospy.Publisher('posecnn_result', PoseCNNMsg, queue_size=1)
 
     # Initialize ROS node
     rospy.init_node('dope_vis', anonymous=True)
     rate = rospy.Rate(freq)
 
-    print ("Running DOPE...  (Listening to camera topic: '{}')".format(topic_cam)) 
+    print ("Running DOPE...  (Listening to camera topic: '{}')".format(topic_cam))
     print ("Ctrl-C to stop")
 
     while not rospy.is_shutdown():
@@ -202,18 +207,19 @@ def run_dope_node(params, freq=5):
             for m in models:
                 # Detect object
                 results = ObjectDetector.detect_object_in_image(
-                            models[m].net, 
+                            models[m].net,
                             pnp_solvers[m],
                             g_img,
                             config_detect
                             )
-                
+
                 # Publish pose and overlay cube on image
+                poses = []
                 for i_r, result in enumerate(results):
                     if result["location"] is None:
                         continue
                     loc = result["location"]
-                    ori = result["quaternion"]                    
+                    ori = result["quaternion"]
                     msg = PoseStamped()
                     msg.header.frame_id = params["frame_id"]
                     msg.header.stamp = rospy.Time.now()
@@ -225,6 +231,22 @@ def run_dope_node(params, freq=5):
                     msg.pose.orientation.y = ori[1]
                     msg.pose.orientation.z = ori[2]
                     msg.pose.orientation.w = ori[3]
+                    # poses.append([loc[0] / CONVERT_SCALE_CM_TO_METERS,
+                    #     loc[1] / CONVERT_SCALE_CM_TO_METERS,
+                    #     loc[2] / CONVERT_SCALE_CM_TO_METERS,
+                    #     ori[3],
+                    #     ori[2],
+                    #     ori[1],
+                    #     ori[0]
+                    # ])
+                    poses += [loc[0] / CONVERT_SCALE_CM_TO_METERS,
+                        loc[1] / CONVERT_SCALE_CM_TO_METERS,
+                        loc[2] / CONVERT_SCALE_CM_TO_METERS,
+                        ori[3],
+                        ori[2],
+                        ori[1],
+                        ori[0]
+                    ]
 
                     # Publish
                     pubs[m].publish(msg)
@@ -236,14 +258,37 @@ def run_dope_node(params, freq=5):
                         for pair in result['projected_points']:
                             points2d.append(tuple(pair))
                         DrawCube(points2d, draw_colors[m])
-                
+
             # Publish the image with results overlaid
             pub_rgb_dope_points.publish(
                 CvBridge().cv2_to_imgmsg(
-                    np.array(im)[...,::-1], 
+                    np.array(im)[...,::-1],
                     "bgr8"
                 )
             )
+
+            msg = PoseCNNMsg()
+            # msg.height = int(im.shape[0])
+            # msg.width = int(im.shape[1])
+            # msg.roi_num = int(rois.shape[0])
+            # msg.roi_channel = int(rois.shape[1])
+            # msg.fx = float(self.meta_data['intrinsic_matrix'][0, 0])
+            # msg.fy = float(self.meta_data['intrinsic_matrix'][1, 1])
+            # msg.px = float(self.meta_data['intrinsic_matrix'][0, 2])
+            # msg.py = float(self.meta_data['intrinsic_matrix'][1, 2])
+            # msg.factor = float(self.meta_data['factor_depth'])
+            # msg.znear = float(0.25)
+            # msg.zfar = float(6.0)
+            msg.label = CvBridge().cv2_to_imgmsg(np.array(im)[...,::-1], 'bgr8')
+            # msg.center = self.cv_bridge.cv2_to_imgmsg(im_center)
+            # msg.depth = self.cv_bridge.cv2_to_imgmsg(depth_cv, 'mono16')
+            # msg.rois = rois.astype(np.float32).flatten().tolist()
+            # msg.poses = poses.astype(np.float32).flatten().tolist()
+            msg.poses = poses
+            # msg.labels = np.array(label_list).astype(np.str).tolist()
+            posecnn_pub.publish(msg)
+
+
         rate.sleep()
 
 
