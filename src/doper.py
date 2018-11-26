@@ -203,9 +203,10 @@ def run_dope_node(params, freq=5):
             img_copy = g_img.copy()
             im = Image.fromarray(img_copy)
             g_draw = ImageDraw.Draw(im)
-
+            labels = []
             for m in models:
                 # Detect object
+                labels += models[m].get_name()
                 results = ObjectDetector.detect_object_in_image(
                             models[m].net,
                             pnp_solvers[m],
@@ -286,6 +287,7 @@ def run_dope_node(params, freq=5):
             # msg.poses = poses.astype(np.float32).flatten().tolist()
             msg.poses = poses
             # msg.labels = np.array(label_list).astype(np.str).tolist()
+            msg.labels = labels
             posecnn_pub.publish(msg)
 
 
