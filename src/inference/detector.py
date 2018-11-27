@@ -210,15 +210,16 @@ class DopeNetwork(nn.Module):
 class ModelData(object):
     '''This class contains methods for loading the neural network'''
 
-    def __init__(self, name="", net_path="", gpu_id=0):
+    def __init__(self, name="", net_path="", gpu_id=0, device="gpu"):
         self.name = name
         self.net_path = net_path  # Path to trained network model
         self.net = None  # Trained network
         self.gpu_id = gpu_id
+        self.device = device
 
     def get_name(self):
         return self.name
-        
+
     def get_net(self):
         '''Returns network'''
         if not self.net:
@@ -239,8 +240,15 @@ class ModelData(object):
         model_loading_start_time = time.time()
         print("Loading DOPE model '{}'...".format(path))
         net = DopeNetwork()
-        net = torch.nn.DataParallel(net, [0]).cuda()
-        net.load_state_dict(torch.load(path))
+
+        if self.device == "gpu":
+            net = torch.nn.DataParallel(net, [0]).cuda()
+            net.load_state_dict(torch.load(path))
+        if self.device == "cpu":
+            device = torch.device('cpu')
+            net = torch.nn.DataParallel(net, [0])
+            net.load_state_dict(torch.load(path, map_location=device))
+
         net.eval()
         print('    Model loaded in {} seconds.'.format(
             time.time() - model_loading_start_time))
@@ -264,7 +272,10 @@ class ObjectDetector(object):
 
         # Run network inference
         image_tensor = transform(in_img)
-        image_torch = Variable(image_tensor).cuda().unsqueeze(0)
+        if config.device == "gpu":
+            image_torch = Variable(image_tensor).cuda().unsqueeze(0)
+        if config.device == "cpu":
+            image_torch = Variable(image_tensor).unsqueeze(0)
         out, seg = net_model(image_torch)
         vertex2 = out[-1][0]
         aff = seg[-1][0]

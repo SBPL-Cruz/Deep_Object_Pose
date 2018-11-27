@@ -141,13 +141,14 @@ def run_dope_node(params, freq=5):
     config_detect.thresh_map = params['thresh_map']
     config_detect.sigma = params['sigma']
     config_detect.thresh_points = params["thresh_points"]
-
+    config_detect.device = params["device"]
     # For each object to detect, load network model, create PNP solver, and start ROS publishers
     for model in params['weights']:
         models[model] =\
             ModelData(
-                model,
-                g_path2package + "/weights/" + params['weights'][model]
+                name=model,
+                net_path=g_path2package + "/weights/" + params['weights'][model],
+                device=params['device']
             )
         models[model].load_net_model()
 
