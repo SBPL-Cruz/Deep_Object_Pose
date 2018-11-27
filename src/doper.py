@@ -207,7 +207,7 @@ def run_dope_node(params, freq=5):
             labels = []
             for m in models:
                 # Detect object
-                labels += models[m].get_name()
+                labels.append(models[m].get_name())
                 results = ObjectDetector.detect_object_in_image(
                             models[m].net,
                             pnp_solvers[m],
