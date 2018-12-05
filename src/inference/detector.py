@@ -242,10 +242,12 @@ class ModelData(object):
         net = DopeNetwork()
 
         if self.device == "gpu":
+            print("Using GPU")
             net = torch.nn.DataParallel(net, [0]).cuda()
             net.load_state_dict(torch.load(path))
         if self.device == "cpu":
             device = torch.device('cpu')
+            print("Using CPU")
             net = torch.nn.DataParallel(net, [0])
             net.load_state_dict(torch.load(path, map_location=device))
 

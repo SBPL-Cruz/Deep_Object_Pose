@@ -15,9 +15,11 @@ import sys
 
 import numpy as np
 import cv2
+import tf
 
 import rospy
 import rospkg
+import rosparam
 from std_msgs.msg import String, Empty
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image as ImageSensor_msg
@@ -115,6 +117,7 @@ def run_dope_node(params, freq=5):
     global g_draw
 
     pubs = {}
+    pubs_world = {}
     models = {}
     pnp_solvers = {}
     pub_dimension = {}
@@ -167,6 +170,12 @@ def run_dope_node(params, freq=5):
                 PoseStamped,
                 queue_size=10
             )
+        pubs_world[model] = \
+            rospy.Publisher(
+                '{}/pose_world_{}'.format(params['topic_publishing'], model),
+                PoseStamped,
+                queue_size=10
+            )
         pub_dimension[model] = \
             rospy.Publisher(
                 '{}/dimension_{}'.format(params['topic_publishing'], model),
@@ -193,12 +202,24 @@ def run_dope_node(params, freq=5):
 
     # Initialize ROS node
     rospy.init_node('dope_vis', anonymous=True)
+
+    tf_listener = tf.TransformListener()
+    tf_broadcaster = tf.TransformBroadcaster()
+
     rate = rospy.Rate(freq)
+    rospy.set_param('use_sim_time', True)
+    rospy.set_param('use_sim_time', 'true')
 
     print ("Running DOPE...  (Listening to camera topic: '{}')".format(topic_cam))
     print ("Ctrl-C to stop")
 
     while not rospy.is_shutdown():
+        tf_broadcaster.sendTransform((0, 1, 0),
+                         (0.7071, 0, 0, -0.7071),
+                         rospy.Time.now(),
+                         "/dope",     # child
+                         "/world"      # parent
+                         )
         if g_img is not None:
             # Copy and draw image
             img_copy = g_img.copy()
@@ -215,6 +236,11 @@ def run_dope_node(params, freq=5):
                             config_detect
                             )
 
+
+                # if tf_listener.frameExists("/world") and tf_listener.frameExists("/camera_rgb_optical_frame"):
+                    # t = tf_listener.getLatestCommonTime("/world", "/camera_rgb_optical_frame")
+                # position, quaternion = tf_listener.lookupTransform("/world", "/camera_rgb_optical_frame",  rospy.Time(0))
+                # print(position, quaternion)
                 # Publish pose and overlay cube on image
                 poses = []
                 for i_r, result in enumerate(results):
@@ -223,16 +249,23 @@ def run_dope_node(params, freq=5):
                     loc = result["location"]
                     ori = result["quaternion"]
                     msg = PoseStamped()
-                    msg.header.frame_id = params["frame_id"]
-                    msg.header.stamp = rospy.Time.now()
+                    # msg.header.frame_id = params["frame_id"]
+                    msg.header.frame_id = "/camera_rgb_optical_frame"
+                    # msg.header.stamp = rospy.Time.now()
                     CONVERT_SCALE_CM_TO_METERS = 100
+                    # loc[1] = 100 - loc[1]
+
                     msg.pose.position.x = loc[0] / CONVERT_SCALE_CM_TO_METERS
                     msg.pose.position.y = loc[1] / CONVERT_SCALE_CM_TO_METERS
                     msg.pose.position.z = loc[2] / CONVERT_SCALE_CM_TO_METERS
+                    # print("X : %f Y: %f Z: %f" % (msg.pose.position.x, msg.pose.position.y, msg.pose.position.z))
                     msg.pose.orientation.x = ori[0]
                     msg.pose.orientation.y = ori[1]
                     msg.pose.orientation.z = ori[2]
                     msg.pose.orientation.w = ori[3]
+
+
+
                     # poses.append([loc[0] / CONVERT_SCALE_CM_TO_METERS,
                     #     loc[1] / CONVERT_SCALE_CM_TO_METERS,
                     #     loc[2] / CONVERT_SCALE_CM_TO_METERS,
@@ -249,11 +282,16 @@ def run_dope_node(params, freq=5):
                         ori[1],
                         ori[0]
                     ]
-
                     # Publish
                     pubs[m].publish(msg)
                     pub_dimension[m].publish(str(params['dimensions'][m]))
-
+                    try:
+                        translation, rotation = tf_listener.lookupTransform('/world', '/camera_rgb_optical_frame', rospy.Time(0))
+                        pose_in_world = tf_listener.transformPose("/world", msg)
+                        pubs_world[m].publish(pose_in_world)
+                        # print(pose_in_world)
+                    except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+                        continue
                     # Draw the cube
                     if None not in result['projected_points']:
                         points2d = []
