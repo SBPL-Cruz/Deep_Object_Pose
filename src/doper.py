@@ -16,7 +16,7 @@ import sys
 import numpy as np
 import cv2
 import tf
-
+import math
 import rospy
 import rospkg
 import rosparam
@@ -214,12 +214,13 @@ def run_dope_node(params, freq=5):
     print ("Ctrl-C to stop")
 
     while not rospy.is_shutdown():
-        tf_broadcaster.sendTransform((0, 1, 0),
-                         (0.7071, 0, 0, -0.7071),
-                         rospy.Time.now(),
-                         "/dope",     # child
-                         "/world"      # parent
-                         )
+        # tf_broadcaster.sendTransform((0, 0, 0),
+        #                  # (0.7071, 0, 0, -0.7071),
+        #                  tf.transformations.quaternion_from_euler(0, math.pi, 0),
+        #                  rospy.Time.now(),
+        #                  "/dope",     # child
+        #                  "/camera_rgb_optical_frame"      # parent
+        #                  )
         if g_img is not None:
             # Copy and draw image
             img_copy = g_img.copy()
@@ -250,6 +251,7 @@ def run_dope_node(params, freq=5):
                     ori = result["quaternion"]
                     msg = PoseStamped()
                     # msg.header.frame_id = params["frame_id"]
+                    # msg.header.frame_id = "/dope"
                     msg.header.frame_id = "/camera_rgb_optical_frame"
                     # msg.header.stamp = rospy.Time.now()
                     CONVERT_SCALE_CM_TO_METERS = 100
