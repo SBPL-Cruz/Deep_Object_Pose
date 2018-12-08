@@ -47,6 +47,7 @@ g_draw = None
 ### Basic functions
 def __image_callback(msg):
     '''Image callback'''
+    # rospy.logerr("test")
     global g_img
     g_img = g_bridge.imgmsg_to_cv2(msg, "rgb8")
     # cv2.imwrite('img.png', cv2.cvtColor(g_img, cv2.COLOR_BGR2RGB))  # for debugging
@@ -201,17 +202,17 @@ def run_dope_node(params, freq=5):
     posecnn_pub = rospy.Publisher('posecnn_result', PoseCNNMsg, queue_size=1)
 
     # Initialize ROS node
-    rospy.init_node('dope_vis', anonymous=True)
+    # rospy.init_node('dope_vis', anonymous=True)
 
     tf_listener = tf.TransformListener()
     tf_broadcaster = tf.TransformBroadcaster()
 
     rate = rospy.Rate(freq)
-    rospy.set_param('use_sim_time', True)
-    rospy.set_param('use_sim_time', 'true')
+    # rospy.set_param('use_sim_time', True)
+    # rospy.set_param('use_sim_time', 'true')
 
-    print ("Running DOPE...  (Listening to camera topic: '{}')".format(topic_cam))
-    print ("Ctrl-C to stop")
+    rospy.logwarn ("Running DOPE...  (Listening to camera topic: '{}')".format(topic_cam))
+    rospy.logwarn ("Ctrl-C to stop")
 
     while not rospy.is_shutdown():
         # tf_broadcaster.sendTransform((0, 0, 0),
@@ -237,7 +238,7 @@ def run_dope_node(params, freq=5):
                             config_detect
                             )
 
-
+                # rospy.logerr(results)
                 # if tf_listener.frameExists("/world") and tf_listener.frameExists("/camera_rgb_optical_frame"):
                     # t = tf_listener.getLatestCommonTime("/world", "/camera_rgb_optical_frame")
                 # position, quaternion = tf_listener.lookupTransform("/world", "/camera_rgb_optical_frame",  rospy.Time(0))
@@ -250,9 +251,9 @@ def run_dope_node(params, freq=5):
                     loc = result["location"]
                     ori = result["quaternion"]
                     msg = PoseStamped()
-                    # msg.header.frame_id = params["frame_id"]
+                    msg.header.frame_id = params["frame_id"]
                     # msg.header.frame_id = "/dope"
-                    msg.header.frame_id = "/camera_rgb_optical_frame"
+                    # msg.header.frame_id = "/camera_rgb_optical_frame"
                     # msg.header.stamp = rospy.Time.now()
                     CONVERT_SCALE_CM_TO_METERS = 100
                     # loc[1] = 100 - loc[1]
@@ -288,7 +289,7 @@ def run_dope_node(params, freq=5):
                     pubs[m].publish(msg)
                     pub_dimension[m].publish(str(params['dimensions'][m]))
                     try:
-                        translation, rotation = tf_listener.lookupTransform('/world', '/camera_rgb_optical_frame', rospy.Time(0))
+                        translation, rotation = tf_listener.lookupTransform('/world', params["frame_id"], rospy.Time(0))
                         pose_in_world = tf_listener.transformPose("/world", msg)
                         pubs_world[m].publish(pose_in_world)
                         # print(pose_in_world)
@@ -338,20 +339,23 @@ def run_dope_node(params, freq=5):
 if __name__ == "__main__":
     '''Main routine to run DOPE'''
 
-    if len(sys.argv) > 1:
-        config_name = sys.argv[1]
-    else:
-        config_name = "config_pose.yaml"
+    rospy.init_node('dope_vis', anonymous=True, log_level=rospy.INFO)
+    config_name = "config_pose.yaml"
+    # if len(sys.argv) > 1:
+    #     config_name = sys.argv[1]
+    # else:
+    #     config_name = "config_pose.yaml"
     rospack = rospkg.RosPack()
     params = None
     yaml_path = g_path2package + '/config/{}'.format(config_name)
+    # rospy.logerr(yaml_path)
     with open(yaml_path, 'r') as stream:
         try:
-            print("Loading DOPE parameters from '{}'...".format(yaml_path))
+            rospy.logwarn("Loading DOPE parameters from '{}'...".format(yaml_path))
             params = yaml.load(stream)
-            print('    Parameters loaded.')
+            rospy.logwarn('    Parameters loaded.')
         except yaml.YAMLError as exc:
-            print(exc)
+            rospy.logerr(exc)
 
     topic_cam = params['topic_camera']
 

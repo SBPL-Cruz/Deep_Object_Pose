@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+
+<launch>
+
+  <arg name="kinect" default="1"/>
+  <arg name="rviz" default="1"/>
+
+  <node name="dope_vis" pkg="dope" type="doper.py" />
+
+  <include file="$(find obj_recognition)/launch/robot_perception.launch" />
+
+  <group if="$(arg rviz)">
+    <include file="$(find cruzr_gazebo)/launch/rviz.launch">
+      <arg name="urdf" value="cruzr_gazebo_hand_kinect.urdf"/>
+      <arg name="rviz_config" value="cruzr_obj_detection.rviz"/>
+    </include>
+  </group>
+
+  <!-- <machine name="robot" address="http://192.168.1.168:11311" env-loader="/opt/ros/indigo/env.sh" default="true"/>
+
+  <group if="$(arg kinect)">
+    <include file="$(find freenect_launch)/launch/freenect_tf_prefix.launch">
+      <arg name="machine" value="robot"/>
+      <arg name="camera" value="head_camera"/>
+      <arg name="publish_tf" value="false"/>
+    </include>
+  </group> -->
+
+
+</launch>
