@@ -130,3 +130,6 @@ Thanks to Jeffrey Smith (jeffreys@nvidia.com) for creating the Docker image.
 ## Contact
 
 Jonathan Tremblay (jtremblay@nvidia.com), Stan Birchfield (sbirchfield@nvidia.com)
+````
+roslaunch freenect_launch freenect_tf_prefix.launch  publish_tf:=false camera:=head_camera
+````
