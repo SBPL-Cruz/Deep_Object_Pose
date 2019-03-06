@@ -267,7 +267,7 @@ def run_dope_node(params, freq=5):
                     msg.pose.orientation.z = ori[2]
                     msg.pose.orientation.w = ori[3]
 
-
+                    print("Found Object");
 
                     # poses.append([loc[0] / CONVERT_SCALE_CM_TO_METERS,
                     #     loc[1] / CONVERT_SCALE_CM_TO_METERS,

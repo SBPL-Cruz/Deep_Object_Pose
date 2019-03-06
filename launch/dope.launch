@@ -9,12 +9,18 @@
 
   <include file="$(find obj_recognition)/launch/robot_perception.launch" />
 
-  <group if="$(arg rviz)">
+  <node
+    name="rviz"
+    pkg="rviz"
+    type="rviz"
+    args="-d $(find cruzr_gazebo)/launch/cruzr_obj_detection.rviz" />
+
+  <!-- <group if="$(arg rviz)">
     <include file="$(find cruzr_gazebo)/launch/rviz.launch">
       <arg name="urdf" value="cruzr_gazebo_hand_kinect.urdf"/>
       <arg name="rviz_config" value="cruzr_obj_detection.rviz"/>
     </include>
-  </group>
+  </group> -->
 
   <!-- <machine name="robot" address="http://192.168.1.168:11311" env-loader="/opt/ros/indigo/env.sh" default="true"/>
 
