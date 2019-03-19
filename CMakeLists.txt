@@ -208,3 +208,8 @@ catkin_install_python(
   src/doper.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
+catkin_install_python(
+  PROGRAMS
+  src/machine.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)

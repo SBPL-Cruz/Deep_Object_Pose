@@ -213,7 +213,7 @@ def run_dope_node(params, freq=5):
 
     rospy.logwarn ("Running DOPE...  (Listening to camera topic: '{}')".format(topic_cam))
     rospy.logwarn ("Ctrl-C to stop")
-
+    results = []
     while not rospy.is_shutdown():
         # tf_broadcaster.sendTransform((0, 0, 0),
         #                  # (0.7071, 0, 0, -0.7071),
@@ -224,19 +224,24 @@ def run_dope_node(params, freq=5):
         #                  )
         if g_img is not None:
             # Copy and draw image
+
+
             img_copy = g_img.copy()
             im = Image.fromarray(img_copy)
             g_draw = ImageDraw.Draw(im)
             labels = []
-            for m in models:
-                # Detect object
-                labels.append(models[m].get_name())
-                results = ObjectDetector.detect_object_in_image(
-                            models[m].net,
-                            pnp_solvers[m],
-                            g_img,
-                            config_detect
-                            )
+            if rospy.get_param("object_recognition_request") == 1:
+                rospy.logwarn ("Received object recognition request")
+                rospy.set_param("object_recognition_request", 0)
+                for m in models:
+                    # Detect object
+                    labels.append(models[m].get_name())
+                    results = ObjectDetector.detect_object_in_image(
+                                models[m].net,
+                                pnp_solvers[m],
+                                g_img,
+                                config_detect
+                                )
 
                 # rospy.logerr(results)
                 # if tf_listener.frameExists("/world") and tf_listener.frameExists("/camera_rgb_optical_frame"):
@@ -244,6 +249,69 @@ def run_dope_node(params, freq=5):
                 # position, quaternion = tf_listener.lookupTransform("/world", "/camera_rgb_optical_frame",  rospy.Time(0))
                 # print(position, quaternion)
                 # Publish pose and overlay cube on image
+                # poses = []
+                # for i_r, result in enumerate(results):
+                #     if result["location"] is None:
+                #         continue
+                #     loc = result["location"]
+                #     ori = result["quaternion"]
+                #     msg = PoseStamped()
+                #     msg.header.frame_id = params["frame_id"]
+                #     # msg.header.frame_id = "/dope"
+                #     # msg.header.frame_id = "/camera_rgb_optical_frame"
+                #     # msg.header.stamp = rospy.Time.now()
+                #     CONVERT_SCALE_CM_TO_METERS = 100
+                #     # loc[1] = 100 - loc[1]
+                #
+                #     msg.pose.position.x = loc[0] / CONVERT_SCALE_CM_TO_METERS
+                #     msg.pose.position.y = loc[1] / CONVERT_SCALE_CM_TO_METERS
+                #     msg.pose.position.z = loc[2] / CONVERT_SCALE_CM_TO_METERS
+                #     # print("X : %f Y: %f Z: %f" % (msg.pose.position.x, msg.pose.position.y, msg.pose.position.z))
+                #     msg.pose.orientation.x = ori[0]
+                #     msg.pose.orientation.y = ori[1]
+                #     msg.pose.orientation.z = ori[2]
+                #     msg.pose.orientation.w = ori[3]
+                #
+                #     print("Found Object");
+                #
+                #     # poses.append([loc[0] / CONVERT_SCALE_CM_TO_METERS,
+                #     #     loc[1] / CONVERT_SCALE_CM_TO_METERS,
+                #     #     loc[2] / CONVERT_SCALE_CM_TO_METERS,
+                #     #     ori[3],
+                #     #     ori[2],
+                #     #     ori[1],
+                #     #     ori[0]
+                #     # ])
+                #     poses += [loc[0] / CONVERT_SCALE_CM_TO_METERS,
+                #         loc[1] / CONVERT_SCALE_CM_TO_METERS,
+                #         loc[2] / CONVERT_SCALE_CM_TO_METERS,
+                #         ori[3],
+                #         ori[2],
+                #         ori[1],
+                #         ori[0]
+                #     ]
+                #     # Publish
+                #     pubs[m].publish(msg)
+                #     pub_dimension[m].publish(str(params['dimensions'][m]))
+                #     try:
+                #         translation, rotation = tf_listener.lookupTransform('/world', params["frame_id"], rospy.Time(0))
+                #         pose_in_world = tf_listener.transformPose("/world", msg)
+                #         pubs_world[m].publish(pose_in_world)
+                #         # print(pose_in_world)
+                #     except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+                #         continue
+                #     # Draw the cube
+                #     if None not in result['projected_points']:
+                #         points2d = []
+                #         for pair in result['projected_points']:
+                #             points2d.append(tuple(pair))
+                #         DrawCube(points2d, draw_colors[m])
+
+            # Publish the image with results overlaid
+            rospy.set_param("object_recognition_done", 1)
+
+        if len(results) > 0:
+            for m in models:
                 poses = []
                 for i_r, result in enumerate(results):
                     if result["location"] is None:
@@ -302,35 +370,36 @@ def run_dope_node(params, freq=5):
                             points2d.append(tuple(pair))
                         DrawCube(points2d, draw_colors[m])
 
-            # Publish the image with results overlaid
-            pub_rgb_dope_points.publish(
-                CvBridge().cv2_to_imgmsg(
-                    np.array(im)[...,::-1],
-                    "bgr8"
+                pub_rgb_dope_points.publish(
+                    CvBridge().cv2_to_imgmsg(
+                        np.array(im)[...,::-1],
+                        "bgr8"
+                    )
                 )
-            )
 
-            msg = PoseCNNMsg()
-            # msg.height = int(im.shape[0])
-            # msg.width = int(im.shape[1])
-            # msg.roi_num = int(rois.shape[0])
-            # msg.roi_channel = int(rois.shape[1])
-            # msg.fx = float(self.meta_data['intrinsic_matrix'][0, 0])
-            # msg.fy = float(self.meta_data['intrinsic_matrix'][1, 1])
-            # msg.px = float(self.meta_data['intrinsic_matrix'][0, 2])
-            # msg.py = float(self.meta_data['intrinsic_matrix'][1, 2])
-            # msg.factor = float(self.meta_data['factor_depth'])
-            # msg.znear = float(0.25)
-            # msg.zfar = float(6.0)
-            msg.label = CvBridge().cv2_to_imgmsg(np.array(im)[...,::-1], 'bgr8')
-            # msg.center = self.cv_bridge.cv2_to_imgmsg(im_center)
-            # msg.depth = self.cv_bridge.cv2_to_imgmsg(depth_cv, 'mono16')
-            # msg.rois = rois.astype(np.float32).flatten().tolist()
-            # msg.poses = poses.astype(np.float32).flatten().tolist()
-            msg.poses = poses
-            # msg.labels = np.array(label_list).astype(np.str).tolist()
-            msg.labels = labels
-            posecnn_pub.publish(msg)
+                msg = PoseCNNMsg()
+                # msg.height = int(im.shape[0])
+                # msg.width = int(im.shape[1])
+                # msg.roi_num = int(rois.shape[0])
+                # msg.roi_channel = int(rois.shape[1])
+                # msg.fx = float(self.meta_data['intrinsic_matrix'][0, 0])
+                # msg.fy = float(self.meta_data['intrinsic_matrix'][1, 1])
+                # msg.px = float(self.meta_data['intrinsic_matrix'][0, 2])
+                # msg.py = float(self.meta_data['intrinsic_matrix'][1, 2])
+                # msg.factor = float(self.meta_data['factor_depth'])
+                # msg.znear = float(0.25)
+                # msg.zfar = float(6.0)
+                msg.label = CvBridge().cv2_to_imgmsg(np.array(im)[...,::-1], 'bgr8')
+                # msg.center = self.cv_bridge.cv2_to_imgmsg(im_center)
+                # msg.depth = self.cv_bridge.cv2_to_imgmsg(depth_cv, 'mono16')
+                # msg.rois = rois.astype(np.float32).flatten().tolist()
+                # msg.poses = poses.astype(np.float32).flatten().tolist()
+                msg.poses = poses
+                # msg.labels = np.array(label_list).astype(np.str).tolist()
+                msg.labels = labels
+                posecnn_pub.publish(msg)
+
+
 
 
         rate.sleep()
@@ -340,6 +409,7 @@ if __name__ == "__main__":
     '''Main routine to run DOPE'''
 
     rospy.init_node('dope_vis', anonymous=True, log_level=rospy.INFO)
+    rospy.set_param("object_recognition_request", 0)
     config_name = "config_pose.yaml"
     # if len(sys.argv) > 1:
     #     config_name = sys.argv[1]

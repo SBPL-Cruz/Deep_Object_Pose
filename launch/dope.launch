@@ -9,11 +9,11 @@
 
   <include file="$(find obj_recognition)/launch/robot_perception.launch" />
 
-  <node
+  <!-- <node
     name="rviz"
     pkg="rviz"
     type="rviz"
-    args="-d $(find cruzr_gazebo)/launch/cruzr_obj_detection.rviz" />
+    args="-d $(find cruzr_gazebo)/launch/cruzr_obj_detection.rviz" /> -->
 
   <!-- <group if="$(arg rviz)">
     <include file="$(find cruzr_gazebo)/launch/rviz.launch">
