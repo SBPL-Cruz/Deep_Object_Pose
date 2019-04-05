@@ -232,7 +232,7 @@ def run_dope_node(params, freq=5):
             labels = []
             if rospy.get_param("object_recognition_request") == 1:
                 rospy.logwarn ("Received object recognition request")
-                rospy.set_param("object_recognition_request", 0)
+                # rospy.set_param("object_recognition_request", 0)
                 for m in models:
                     # Detect object
                     labels.append(models[m].get_name())
@@ -308,9 +308,11 @@ def run_dope_node(params, freq=5):
                 #         DrawCube(points2d, draw_colors[m])
 
             # Publish the image with results overlaid
-            rospy.set_param("object_recognition_done", 1)
+
 
         if len(results) > 0:
+            rospy.set_param("object_recognition_request", 0)
+            rospy.set_param("object_recognition_done", 1)
             for m in models:
                 poses = []
                 for i_r, result in enumerate(results):
@@ -335,7 +337,7 @@ def run_dope_node(params, freq=5):
                     msg.pose.orientation.z = ori[2]
                     msg.pose.orientation.w = ori[3]
 
-                    print("Found Object");
+                    # rospy.logwarn("Found Object");
 
                     # poses.append([loc[0] / CONVERT_SCALE_CM_TO_METERS,
                     #     loc[1] / CONVERT_SCALE_CM_TO_METERS,
