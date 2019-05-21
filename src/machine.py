@@ -89,101 +89,116 @@ if __name__ == "__main__":
         rospy.init_node('cruiser_state_machine', anonymous=True, log_level=rospy.INFO)
         rate = rospy.Rate(5)
         setup_variables()
+        sleep(10)
 
         myargv = rospy.myargv(argv=sys.argv)
         print(myargv)
 
-        grasp_publisher = rospy.Publisher(
-            '/Grasps',
-            PoseStamped,
-            queue_size=10
-        )
-        msg = PoseStamped()
-        msg.header.frame_id = "world"
-        msg.header.stamp = rospy.Time.now()
+        # start_octomap_server()
 
-        if '--target' in myargv:
-            # Table location
-            print("Moving to table location")
-            msg.pose.position.x = -1.1427744124
-            msg.pose.position.y = 0.967387976377
-            msg.pose.position.z = 0.0
-            msg.pose.orientation.x = 0
-            msg.pose.orientation.y = 0
-            msg.pose.orientation.z = -0.633624393243
-            msg.pose.orientation.w = 0.77364082641
+        if '--object_only' not in myargv:
+            grasp_publisher = rospy.Publisher(
+                '/Grasps',
+                PoseStamped,
+                queue_size=10
+            )
+            msg = PoseStamped()
+            msg.header.frame_id = "world"
+            msg.header.stamp = rospy.Time.now()
 
-            # Hector Slam
-            # msg.pose.position.x, msg.pose.position.y, msg.pose.position.z = (0.262279510498, 0.0541305541992, 0.000)
-            # msg.pose.orientation.x = 0
-            # msg.pose.orientation.y = 0
-            # msg.pose.orientation.z, msg.pose.orientation.w = (-0.00041762191054, 0.999999912796)
+            if '--target' in myargv:
+                # Table location
+                print("Moving to table location")
+                # msg.pose.position.x = -1.1427744124
+                # msg.pose.position.y = 0.967387976377
+                # msg.pose.position.z = 0.0
+                # msg.pose.orientation.x = 0
+                # msg.pose.orientation.y = 0
+                # msg.pose.orientation.z = -0.633624393243
+                # msg.pose.orientation.w = 0.77364082641
 
-        elif '--initial' in myargv:
-            # Initial location
-            # print("Moving to initial location")
-            # msg.pose.position.x, msg.pose.position.y, msg.pose.position.z = (-2.615, 1.152, 0.000)
-            # msg.pose.orientation.x = 0
-            # msg.pose.orientation.y = 0
-            # msg.pose.orientation.z, msg.pose.orientation.w = (0.994, -0.113)
+                # Hector Slam
+                msg.pose.position.x, msg.pose.position.y, msg.pose.position.z = (-0.278, -0.970, 0.000)
+                msg.pose.orientation.x = 0
+                msg.pose.orientation.y = 0
+                msg.pose.orientation.z, msg.pose.orientation.w = (0.974, 0.227)
 
-            # msg.pose.position.x, msg.pose.position.y, msg.pose.position.z = (-3.978, 0.420, 0.000)
-            # msg.pose.orientation.x = 0
-            # msg.pose.orientation.y = 0
-            # msg.pose.orientation.z, msg.pose.orientation.w = (0.879, -0.476)
-            #
-            # msg.pose.position.x, msg.pose.position.y, msg.pose.position.z = (-5.839, -1.054, 0.000)
-            # msg.pose.orientation.x = 0
-            # msg.pose.orientation.y = 0
-            # msg.pose.orientation.z, msg.pose.orientation.w = (1.000, 0.010)
+            elif '--initial' in myargv:
+                    # position:
+                    #   x: 0.64427947998
+                    #   y: 0.363460540771
+                    #   z: 0.0
+                    # orientation:
+                    #   x: 0.0
+                    #   y: 0.0
+                    #   z: -0.81848372534
+                    #   w: 0.574529713203
 
-            # Hector Slam
-            msg.pose.position.x, msg.pose.position.y, msg.pose.position.z = (0.539, 0.146, 0.000)
-            msg.pose.orientation.x = 0
-            msg.pose.orientation.y = 0
-            msg.pose.orientation.z, msg.pose.orientation.w = (-0.572, 0.820)
+                # Initial location
+                # print("Moving to initial location")
+                # msg.pose.position.x, msg.pose.position.y, msg.pose.position.z = (-2.615, 1.152, 0.000)
+                # msg.pose.orientation.x = 0
+                # msg.pose.orientation.y = 0
+                # msg.pose.orientation.z, msg.pose.orientation.w = (0.994, -0.113)
 
-        else:
-            # Table location
-            print("Moving to table location")
-            msg.pose.position.x = -1.1427744124
-            msg.pose.position.y = 0.967387976377
-            msg.pose.position.z = 0.0
-            msg.pose.orientation.x = 0
-            msg.pose.orientation.y = 0
-            msg.pose.orientation.z = -0.633624393243
-            msg.pose.orientation.w = 0.77364082641
+                # msg.pose.position.x, msg.pose.position.y, msg.pose.position.z = (-3.978, 0.420, 0.000)
+                # msg.pose.orientation.x = 0
+                # msg.pose.orientation.y = 0
+                # msg.pose.orientation.z, msg.pose.orientation.w = (0.879, -0.476)
+                #
+                # msg.pose.position.x, msg.pose.position.y, msg.pose.position.z = (-5.839, -1.054, 0.000)
+                # msg.pose.orientation.x = 0
+                # msg.pose.orientation.y = 0
+                # msg.pose.orientation.z, msg.pose.orientation.w = (1.000, 0.010)
 
-            # Hector Slam
-            # msg.pose.position.x, msg.pose.position.y, msg.pose.position.z = (0.262279510498, 0.0541305541992, 0.000)
-            # msg.pose.orientation.x = 0
-            # msg.pose.orientation.y = 0
-            # msg.pose.orientation.z, msg.pose.orientation.w = (-0.00041762191054, 0.999999912796)
+                # Hector Slam
+                msg.pose.position.x, msg.pose.position.y, msg.pose.position.z = (0, 0.0, 0.000)
+                msg.pose.orientation.x = 0
+                msg.pose.orientation.y = 0
+                msg.pose.orientation.z, msg.pose.orientation.w = (0.0, 0.999999912796)
 
-        rospy.logwarn ("Requesting Initial Planner")
-        rospy.set_param("cruzr_planner_mode", "BASE")
-        rospy.set_param("cruzr_planner_request", 1)
+            else:
+                # Table location
+                print("Moving to table location")
+                # msg.pose.position.x = -1.1427744124
+                # msg.pose.position.y = 0.967387976377
+                # msg.pose.position.z = 0.0
+                # msg.pose.orientation.x = 0
+                # msg.pose.orientation.y = 0
+                # msg.pose.orientation.z = -0.633624393243
+                # msg.pose.orientation.w = 0.77364082641
 
+                # Hector Slam
+                msg.pose.position.x, msg.pose.position.y, msg.pose.position.z = (-4.548, -0.521, 0.000)
+                msg.pose.orientation.x = 0
+                msg.pose.orientation.y = 0
+                msg.pose.orientation.z, msg.pose.orientation.w = (-0.829, 0.560)
 
-        wait_till_done_and_publish("cruzr_planner_done", "Done Init Planner", rate, grasp_publisher, msg)
-        rospy.set_param("cruzr_planner_done", 0)
+            rospy.logwarn ("Requesting Initial Planner")
+            rospy.set_param("cruzr_planner_mode", "BASE")
+            rospy.set_param("cruzr_planner_request", 1)
 
-        rospy.logwarn ("Requesting Init Controller")
-        rospy.set_param("controller_request", 1)
-        wait_till_done("controller_done", "Done Init Controller", rate)
-        rospy.set_param("controller_done", 0)
+# rostopic pub syscommand std_msgs/String "reload 0.6444 0.36346 -2.108"
+            wait_till_done_and_publish("cruzr_planner_done", "Done Init Planner", rate, grasp_publisher, msg)
+            rospy.set_param("cruzr_planner_done", 0)
+
+            rospy.logwarn ("Requesting Init Controller")
+            rospy.set_param("controller_request", 1)
+            wait_till_done("controller_done", "Done Init Controller", rate)
+            rospy.set_param("controller_done", 0)
 
         sleep(30)
-
-        start_octomap_server()
+        # gain - 0.4 - angular, same for last state angular, max - 0.4
+        # start_octomap_server()
 
         rospy.logwarn ("Requesting Object")
         rospy.set_param("object_recognition_request", 1)
         wait_till_done("object_recognition_done", "Done Object", rate)
 
-        rospy.logwarn ("Requesting Table Segmentation")
-        rospy.set_param("table_segmentation_request", 1)
-        wait_till_done("table_segmentation_done", "Done Table Segmentation", rate)
+        if '--include_table_pose' in myargv:
+            rospy.logwarn ("Requesting Table Segmentation")
+            rospy.set_param("table_segmentation_request", 1)
+            wait_till_done("table_segmentation_done", "Done Table Segmentation", rate)
 
         rospy.logwarn ("Requesting Grasp")
         rospy.set_param("grasp_request", 1)
