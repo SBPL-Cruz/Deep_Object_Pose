@@ -274,7 +274,7 @@ def run_dope_node(params, freq=5):
                     msg.pose.orientation.z = ori[2]
                     msg.pose.orientation.w = ori[3]
 
-                    print("Found Object");
+                    print("Found Object 1");
 
                     # poses.append([loc[0] / CONVERT_SCALE_CM_TO_METERS,
                     #     loc[1] / CONVERT_SCALE_CM_TO_METERS,
@@ -297,8 +297,8 @@ def run_dope_node(params, freq=5):
                     # pub_dimension[m].publish(str(params['dimensions'][m]))
                     try:
                         rospy.logwarn ("Done object recognition request")
-                        translation, rotation = tf_listener.lookupTransform('/world', params["frame_id"], rospy.Time(0))
-                        pose_in_world = tf_listener.transformPose("/world", msg)
+                        translation, rotation = tf_listener.lookupTransform('/map', params["frame_id"], rospy.Time(0))
+                        pose_in_world = tf_listener.transformPose("/map", msg)
                         # pubs_world[m].publish(pose_in_world)
                         # print(pose_in_world).
                         rospy.logwarn(pose_in_world)
@@ -315,7 +315,7 @@ def run_dope_node(params, freq=5):
 
 
         if len(results) > 0:
-
+            print("Found Object 2");
             rospy.set_param("object_recognition_request", 0)
             rospy.set_param("object_recognition_done", 1)
 

@@ -27,7 +27,8 @@ import roslaunch
 # Import DOPE code
 rospack = rospkg.RosPack()
 g_path2package = rospack.get_path('dope')
-planner_path = rospack.get_path('cruzr_planner')
+# planner_path = rospack.get_path('cruzr_planner')
+planner_path = rospack.get_path('walker_planner')
 
 
 def start_octomap_server():
@@ -76,8 +77,8 @@ def setup_variables():
     rospy.set_param("table_segmentation_done", 0)
     rospy.set_param("grasp_request", 0)
     rospy.set_param("grasp_done", 0)
-    rospy.set_param("cruzr_planner_request", 0)
-    rospy.set_param("cruzr_planner_done", 0)
+    rospy.set_param("walker_planner_request", 0)
+    rospy.set_param("walker_planner_done", 0)
     rospy.set_param("controller_request", 0)
     rospy.set_param("controller_done", 0)
 
@@ -103,7 +104,7 @@ if __name__ == "__main__":
                 queue_size=10
             )
             msg = PoseStamped()
-            msg.header.frame_id = "world"
+            msg.header.frame_id = "map"
             msg.header.stamp = rospy.Time.now()
 
             if '--target' in myargv:
@@ -118,10 +119,10 @@ if __name__ == "__main__":
                 # msg.pose.orientation.w = 0.77364082641
 
                 # Hector Slam
-                msg.pose.position.x, msg.pose.position.y, msg.pose.position.z = (-0.278, -0.970, 0.000)
+                msg.pose.position.x, msg.pose.position.y, msg.pose.position.z = (0.640, -0.011, 1.06)
                 msg.pose.orientation.x = 0
                 msg.pose.orientation.y = 0
-                msg.pose.orientation.z, msg.pose.orientation.w = (0.974, 0.227)
+                msg.pose.orientation.z, msg.pose.orientation.w = (-0.709, 0.705)
 
             elif '--initial' in myargv:
                     # position:
@@ -152,10 +153,10 @@ if __name__ == "__main__":
                 # msg.pose.orientation.z, msg.pose.orientation.w = (1.000, 0.010)
 
                 # Hector Slam
-                msg.pose.position.x, msg.pose.position.y, msg.pose.position.z = (0, 0.0, 0.000)
+                msg.pose.position.x, msg.pose.position.y, msg.pose.position.z = (1.0, -0.161, 0.8)
                 msg.pose.orientation.x = 0
                 msg.pose.orientation.y = 0
-                msg.pose.orientation.z, msg.pose.orientation.w = (0.0, 0.999999912796)
+                msg.pose.orientation.z, msg.pose.orientation.w = (0.0, 1)
 
             else:
                 # Table location
@@ -169,25 +170,25 @@ if __name__ == "__main__":
                 # msg.pose.orientation.w = 0.77364082641
 
                 # Hector Slam
-                msg.pose.position.x, msg.pose.position.y, msg.pose.position.z = (-4.548, -0.521, 0.000)
+                msg.pose.position.x, msg.pose.position.y, msg.pose.position.z = (-0.543, -0.757, 1.06)
                 msg.pose.orientation.x = 0
                 msg.pose.orientation.y = 0
-                msg.pose.orientation.z, msg.pose.orientation.w = (-0.829, 0.560)
+                msg.pose.orientation.z, msg.pose.orientation.w = (0.984, -0.177)
 
             rospy.logwarn ("Requesting Initial Planner")
-            rospy.set_param("cruzr_planner_mode", "BASE")
-            rospy.set_param("cruzr_planner_request", 1)
+            rospy.set_param("walker_planner_mode", "BASE")
+            rospy.set_param("walker_planner_request", 1)
 
 # rostopic pub syscommand std_msgs/String "reload 0.6444 0.36346 -2.108"
-            wait_till_done_and_publish("cruzr_planner_done", "Done Init Planner", rate, grasp_publisher, msg)
-            rospy.set_param("cruzr_planner_done", 0)
+            wait_till_done_and_publish("walker_planner_done", "Done Init Planner", rate, grasp_publisher, msg)
+            rospy.set_param("walker_planner_done", 0)
 
             rospy.logwarn ("Requesting Init Controller")
             rospy.set_param("controller_request", 1)
             wait_till_done("controller_done", "Done Init Controller", rate)
             rospy.set_param("controller_done", 0)
 
-        sleep(30)
+        # sleep(30)
         # gain - 0.4 - angular, same for last state angular, max - 0.4
         # start_octomap_server()
 
@@ -205,9 +206,9 @@ if __name__ == "__main__":
         wait_till_done("grasp_done", "Done Grasp", rate)
 
         rospy.logwarn ("Requesting Planner")
-        rospy.set_param("cruzr_planner_mode", "FULLBODY")
-        rospy.set_param("cruzr_planner_request", 1)
-        wait_till_done("cruzr_planner_done", "Done Planner", rate)
+        rospy.set_param("walker_planner_mode", "FULLBODY")
+        rospy.set_param("walker_planner_request", 1)
+        wait_till_done("walker_planner_done", "Done Planner", rate)
 
         rospy.logwarn ("Requesting Controller")
         rospy.set_param("controller_request", 1)
