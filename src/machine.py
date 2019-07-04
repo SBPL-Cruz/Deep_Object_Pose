@@ -90,7 +90,7 @@ if __name__ == "__main__":
         rospy.init_node('cruiser_state_machine', anonymous=True, log_level=rospy.INFO)
         rate = rospy.Rate(5)
         setup_variables()
-        sleep(10)
+        # sleep(10)
 
         myargv = rospy.myargv(argv=sys.argv)
         print(myargv)
@@ -119,10 +119,10 @@ if __name__ == "__main__":
                 # msg.pose.orientation.w = 0.77364082641
 
                 # Hector Slam
-                msg.pose.position.x, msg.pose.position.y, msg.pose.position.z = (0.640, -0.011, 1.06)
+                msg.pose.position.x, msg.pose.position.y, msg.pose.position.z = (-0.864, -0.002, 1.06)
                 msg.pose.orientation.x = 0
                 msg.pose.orientation.y = 0
-                msg.pose.orientation.z, msg.pose.orientation.w = (-0.709, 0.705)
+                msg.pose.orientation.z, msg.pose.orientation.w = (0.998, -0.062)
 
             elif '--initial' in myargv:
                     # position:

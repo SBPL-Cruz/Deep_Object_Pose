@@ -5,16 +5,21 @@
   <arg name="kinect" default="1"/>
   <arg name="realsense" default="1"/>
   <arg name="rviz" default="1"/>
+  <arg name="graspit" default="1"/>
 
   <group if="$(arg realsense)">
     <include file="$(find realsense2_camera)/launch/rs_rgbd.launch">
       <arg name="camera" value="head_camera"/>
     </include>
   </group>
-  
+
   <node name="dope_vis" pkg="dope" type="doper.py" />
 
   <include file="$(find obj_recognition)/launch/robot_perception.launch" />
+
+  <group if="$(arg graspit)">
+    <node name="database_grasper" pkg="graspit_planning_tutorial" type="database_grasper" />
+  </group>
 
   <!-- <node
     name="rviz"
