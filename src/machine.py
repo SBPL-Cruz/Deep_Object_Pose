@@ -87,7 +87,7 @@ def setup_variables():
     rospy.set_param("trac_ik_done", 0)
     rospy.set_param("lift_request", 0)
     rospy.set_param("skip_states", 1)
-    rospy.set_param("hand_open_request", 1)
+    # rospy.set_param("hand_open_request", 1)
 
 def load_yaml(yaml_path, ros_param_name):
 
@@ -183,10 +183,11 @@ if __name__ == "__main__":
                 print("Moving to table location")
 
                 # Hector Slam
-                pose.position.x, pose.position.y, pose.position.z = (0.469, 0.019, 1.06)
+                pose.position.x, pose.position.y, pose.position.z = (-0.0293, -0.0013, 1.06)
                 pose.orientation.x = 0
                 pose.orientation.y = 0
-                pose.orientation.z, pose.orientation.w = (0.703, 0.711)
+                pose.orientation.z, pose.orientation.w = (0.00, 1)
+                # pose.orientation.z, pose.orientation.w = (0.0703, 0.9975)
 
             elif '--initial' in myargv:
                 # Hector Slam
@@ -208,6 +209,7 @@ if __name__ == "__main__":
 
             # sleep(30)
             # gain - 0.4 - angular, same for last state angular, max - 0.4
+            rospy.set_param("hand_open_request", 1)
             start_octomap_server()
 
             rospy.logwarn ("Requesting Object")
@@ -264,13 +266,13 @@ if __name__ == "__main__":
 
             if '--incl_trac_ik' in myargv:
                 # Rerun grasping in case base moved
-                rospy.logwarn ("Requesting Object Again")
-                rospy.set_param("object_recognition_request", 1)
-                wait_till_done("object_recognition_done", "Done Object", rate)
-
-                rospy.logwarn ("Requesting Grasp Again")
-                rospy.set_param("grasp_request", 1)
-                wait_till_done("grasp_done", "Done Grasp", rate)
+                # rospy.logwarn ("Requesting Object Again")
+                # rospy.set_param("object_recognition_request", 1)
+                # wait_till_done("object_recognition_done", "Done Object", rate)
+                #
+                # rospy.logwarn ("Requesting Grasp Again")
+                # rospy.set_param("grasp_request", 1)
+                # wait_till_done("grasp_done", "Done Grasp", rate)
 
                 rospy.logwarn ("Requesting Trac IK")
                 rospy.set_param("lift_request", 0)
@@ -296,12 +298,13 @@ if __name__ == "__main__":
                 #     = (0.282, 0.155, 0.702, 0.635)
                 # pose_in_map = get_transform_pose('base_footprint', 'map', pose)
                 # rospy.Subscriber("/walker/rightLimb/joint_states", JointState, joint_state_callback)
+                rospy.logwarn ("Requesting Trac IK")
                 rospy.set_param("lift_request", 1)
                 sleep(2)
                 # go_to_custom_goal(pose_in_map, rate, "FULLBODY", controller=True)
-                rospy.logwarn ("Requesting Trac IK")
                 rospy.set_param("trac_ik_request", 1)
                 wait_till_done("trac_ik_done", "Done Trac IK", rate)
+
                 rospy.logwarn ("Requesting Controller")
                 rospy.set_param("skip_states", 0)
                 rospy.set_param("controller_request", 1)

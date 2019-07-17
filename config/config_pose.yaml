@@ -1,7 +1,7 @@
 topic_camera: "/head_camera/color/image_rect_color"
 topic_publishing: "dope"
 frame_id: "/head_camera_color_optical_frame"
-device: "gpu"
+device: "cpu"
 # Comment any of these lines to prevent detection / pose estimation of that object
 weights: {
     # "cracker":"cracker_60.pth",
