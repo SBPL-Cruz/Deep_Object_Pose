@@ -176,34 +176,34 @@ if __name__ == "__main__":
 
         # start_octomap_server()
 
-        if '--object_only' not in myargv:
-            pose = Pose()
-            if '--target' in myargv:
-                # Table location
-                print("Moving to table location")
+        # if '--object_only' not in myargv:
+            # pose = Pose()
+            # if '--target' in myargv:
+                # # Table location
+                # print("Moving to table location")
 
-                # Hector Slam
-                pose.position.x, pose.position.y, pose.position.z = (-0.0293, -0.0013, 1.06)
-                pose.orientation.x = 0
-                pose.orientation.y = 0
-                pose.orientation.z, pose.orientation.w = (0.00, 1)
-                # pose.orientation.z, pose.orientation.w = (0.0703, 0.9975)
+                # # Hector Slam
+                # pose.position.x, pose.position.y, pose.position.z = (-0.0293, -0.0013, 1.06)
+                # pose.orientation.x = 0
+                # pose.orientation.y = 0
+                # pose.orientation.z, pose.orientation.w = (0.00, 1)
+                # # pose.orientation.z, pose.orientation.w = (0.0703, 0.9975)
 
-            elif '--initial' in myargv:
-                # Hector Slam
-                pose.position.x, pose.position.y, pose.position.z = (0.0, 0.0, 1.06)
-                pose.orientation.x = 0
-                pose.orientation.y = 0
-                pose.orientation.z, pose.orientation.w = (0.0, 1)
+            # elif '--initial' in myargv:
+                # # Hector Slam
+                # pose.position.x, pose.position.y, pose.position.z = (0.0, 0.0, 1.06)
+                # pose.orientation.x = 0
+                # pose.orientation.y = 0
+                # pose.orientation.z, pose.orientation.w = (0.0, 1)
 
-            else:
-                # Table location
-                print("ERROR : --target or --initial not specified")
-                sys.exit()
-            config_name = "walker_goal.yaml"
-            yaml_path = '{}/experiments/{}'.format(planner_path, config_name)
-            load_yaml(yaml_path, "initial_configuration/joint_state")
-            go_to_custom_goal(pose, rate, "BASE")
+            # else:
+                # # Table location
+                # print("ERROR : --target or --initial not specified")
+                # sys.exit()
+            # config_name = "walker_goal.yaml"
+            # yaml_path = '{}/experiments/{}'.format(planner_path, config_name)
+            # load_yaml(yaml_path, "initial_configuration/joint_state")
+            # go_to_custom_goal(pose, rate, "BASE")
 
         if '--base_only' not in myargv:
 
