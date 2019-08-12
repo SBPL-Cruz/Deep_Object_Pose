@@ -75,8 +75,8 @@ def wait_till_done(param, done_msg, rate):
 def setup_variables():
     rospy.set_param("object_recognition_request", 0)
     rospy.set_param("object_recognition_done", 0)
-    rospy.set_param("table_segmentation_request", 0)
-    rospy.set_param("table_segmentation_done", 0)
+    rospy.set_param("conveyor_segmentation_request", 0)
+    rospy.set_param("conveyor_segmentation_done", 0)
     rospy.set_param("grasp_request", 0)
     rospy.set_param("grasp_done", 0)
     rospy.set_param("walker_planner_request", 0)
@@ -161,9 +161,34 @@ def joint_state_callback(data):
     # print(joint_position_list)
     rospy.set_param('initial_configuration/joint_state', joint_position_list)
 
-if __name__ == "__main__":
-    '''Main routine to run DOPE'''
+#TODO: hardcode the threshold 1.25m and 0.75m
+def object_pose_callback(marker):
+    target_publiser = rospy.Publisher('/Object_Position', ar_track_alvar_msga::AlvarMarkers, queue_size=2)
+    #TODO: assuming x is the axis that's changing
+    pst = marker.pose.pose.position.x;
 
+    if pst < 1.25 and rospy.get_param("object_recognition_done") == 0:
+        rospy.set_param("object_recognition_done",1);
+        target_publiser.publish(marker);
+    elif pst < 0.75 and rospy.get_param("object_recognition_done") == 1:
+        rospy.set_param("object_recognition_done",2);
+        target_publiser.publish(marker);
+
+def object_recognition_buffer(current_state, done_msg, rate):
+    while not rospy.is_shutdown():
+        try:
+            if (rospy.get_param("object_recognition_done") != current_state ):
+                rospy.logwarn (done_msg)
+                break
+            else:
+                #TODO: subscriber to the published topics
+                rospy.Subscriber("TODO", ar_track_alvar_msga::AlvarMarkers ,object_pose_callback)
+            rate.sleep()
+        except KeyboardInterrupt:
+            print('interrupted!')
+
+
+if __name__ == "__main__":
 
     try:
         rospy.init_node('cruiser_state_machine', anonymous=True, log_level=rospy.INFO)
@@ -174,73 +199,50 @@ if __name__ == "__main__":
         myargv = rospy.myargv(argv=sys.argv)
         print(myargv)
 
-        # start_octomap_server()
+        # if '--base_only' not in myargv:
+        run_times = 0
+        rospy.set_param("hand_open_request", 1)
+        #TODO: Conveyor_segmentation_requst
+        #TODO:
+        if '--include_conveyor_pose' in myargv:
+            rospy.logwarn ("Requesting Converyor Segmentation")
+            rospy.set_param("Conveyor_segmentation_request", 1)
+            wait_till_done("Conveyor_segmentation_done", "Done Conveyor Segmentation", rate)
 
-        # if '--object_only' not in myargv:
-            # pose = Pose()
-            # if '--target' in myargv:
-                # # Table location
-                # print("Moving to table location")
+        #TODO:
+        #TODO: Don't know if the planner need this
+        if '--custom_home_state' in myargv:
+            # Use the planner to go to a custom home location
+            rospy.logwarn ("Requesting Hand to Custom Home State")
 
-                # # Hector Slam
-                # pose.position.x, pose.position.y, pose.position.z = (-0.0293, -0.0013, 1.06)
-                # pose.orientation.x = 0
-                # pose.orientation.y = 0
-                # pose.orientation.z, pose.orientation.w = (0.00, 1)
-                # # pose.orientation.z, pose.orientation.w = (0.0703, 0.9975)
+            # First read the goal state which is at hand by the side
+            config_name = "walker_goal.yaml"
+            yaml_path = '{}/experiments/{}'.format(planner_path, config_name)
 
-            # elif '--initial' in myargv:
-                # # Hector Slam
-                # pose.position.x, pose.position.y, pose.position.z = (0.0, 0.0, 1.06)
-                # pose.orientation.x = 0
-                # pose.orientation.y = 0
-                # pose.orientation.z, pose.orientation.w = (0.0, 1)
+            pose = Pose()
+            pose.position.x, pose.position.y, pose.position.z = (0.304, -0.507, 0.795)
+            pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w \
+                 = (0.282, 0.155, 0.702, 0.635)
 
-            # else:
-                # # Table location
-                # print("ERROR : --target or --initial not specified")
-                # sys.exit()
-            # config_name = "walker_goal.yaml"
-            # yaml_path = '{}/experiments/{}'.format(planner_path, config_name)
-            # load_yaml(yaml_path, "initial_configuration/joint_state")
-            # go_to_custom_goal(pose, rate, "BASE")
+            #TODO: map is not used in the world, need another transformation
+            #TODO:
+            pose_in_map = get_transform_pose('base_footprint', 'map', pose)
+            load_yaml(yaml_path, "initial_configuration/joint_state")
+            go_to_custom_goal(pose_in_map, rate, "FULLBODY", controller=False)
 
-        if '--base_only' not in myargv:
+        while run_times < 2:
 
             # sleep(30)
             # gain - 0.4 - angular, same for last state angular, max - 0.4
-            rospy.set_param("hand_open_request", 1)
-            start_octomap_server()
-
             rospy.logwarn ("Requesting Object")
-            rospy.set_param("object_recognition_request", 1)
-            wait_till_done("object_recognition_done", "Done Object", rate)
+            rospy.set_param("object_recognition_request", 0)
+            object_recognition_buffer(rospy.get_param("object_recognition_done"),"Done Object", rate)
 
-            if '--include_table_pose' in myargv:
-                rospy.logwarn ("Requesting Table Segmentation")
-                rospy.set_param("table_segmentation_request", 1)
-                wait_till_done("table_segmentation_done", "Done Table Segmentation", rate)
+            
+            # rospy.logwarn ("Requesting Grasp")
+            # rospy.set_param("grasp_request", 1)
+            # wait_till_done("grasp_done", "Done Grasp", rate)
 
-            if '--custom_home_state' in myargv:
-                # Use the planner to go to a custom home location
-                rospy.logwarn ("Requesting Hand to Custom Home State")
-
-                # First read the goal state which is at hand by the side
-                config_name = "walker_goal.yaml"
-                yaml_path = '{}/experiments/{}'.format(planner_path, config_name)
-
-                pose = Pose()
-                pose.position.x, pose.position.y, pose.position.z = (0.304, -0.507, 0.795)
-                pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w \
-                    = (0.282, 0.155, 0.702, 0.635)
-                pose_in_map = get_transform_pose('base_footprint', 'map', pose)
-                load_yaml(yaml_path, "initial_configuration/joint_state")
-
-                go_to_custom_goal(pose_in_map, rate, "FULLBODY", controller=False)
-
-            rospy.logwarn ("Requesting Grasp")
-            rospy.set_param("grasp_request", 1)
-            wait_till_done("grasp_done", "Done Grasp", rate)
             if '--custom_home_state' in myargv:
                 # If custom home state was used the new goal state would be in this file
                 config_name = "walker_goal_custom_home.yaml"
@@ -252,65 +254,23 @@ if __name__ == "__main__":
                 yaml_path = '{}/experiments/{}'.format(planner_path, config_name)
                 load_yaml(yaml_path, "initial_configuration/joint_state")
 
+            #TODO: will be adapted to the new planner when ready
+            #TODO:
             rospy.logwarn ("Requesting Planner")
             rospy.set_param("walker_planner_mode", "FULLBODY")
             rospy.set_param("walker_planner_request", 1)
             wait_till_done("walker_planner_done", "Done Planner", rate)
             rospy.set_param("walker_planner_done", 0)
 
+            #TODO: do not wait for the controller
+            #TODO: planner should give set the mark once it starts
             rospy.logwarn ("Requesting Controller")
             rospy.set_param("skip_states", 1)
             rospy.set_param("controller_request", 1)
-            wait_till_done("controller_done", "Done Controller", rate)
+            # wait_till_done("controller_done", "Done Controller", rate)
             rospy.set_param("controller_done", 0)
 
-            if '--incl_trac_ik' in myargv:
-                # Rerun grasping in case base moved
-                # rospy.logwarn ("Requesting Object Again")
-                # rospy.set_param("object_recognition_request", 1)
-                # wait_till_done("object_recognition_done", "Done Object", rate)
-                #
-                # rospy.logwarn ("Requesting Grasp Again")
-                # rospy.set_param("grasp_request", 1)
-                # wait_till_done("grasp_done", "Done Grasp", rate)
-
-                rospy.logwarn ("Requesting Trac IK")
-                rospy.set_param("lift_request", 0)
-                rospy.set_param("trac_ik_request", 1)
-                wait_till_done("trac_ik_done", "Done Trac IK", rate)
-
-                rospy.logwarn ("Requesting Controller")
-                rospy.set_param("skip_states", 0)
-                rospy.set_param("controller_request", 1)
-                wait_till_done("controller_done", "Done Controller", rate)
-                rospy.set_param("grasp_done", 0)
-                rospy.set_param("controller_done", 0)
-                rospy.set_param("trac_ik_done", 0)
-
-                rospy.logwarn ("Requesting Hand Close")
-                rospy.set_param("hand_close_request", 1)
-
-                # Go back to custom home state using planner
-                # if '--custom_home_state' in myargv:
-                # pose = Pose()
-                # pose.position.x, pose.position.y, pose.position.z = (0.304, -0.507, 0.795)
-                # pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w \
-                #     = (0.282, 0.155, 0.702, 0.635)
-                # pose_in_map = get_transform_pose('base_footprint', 'map', pose)
-                # rospy.Subscriber("/walker/rightLimb/joint_states", JointState, joint_state_callback)
-                rospy.logwarn ("Requesting Trac IK")
-                rospy.set_param("lift_request", 1)
-                sleep(2)
-                # go_to_custom_goal(pose_in_map, rate, "FULLBODY", controller=True)
-                rospy.set_param("trac_ik_request", 1)
-                wait_till_done("trac_ik_done", "Done Trac IK", rate)
-
-                rospy.logwarn ("Requesting Controller")
-                rospy.set_param("skip_states", 0)
-                rospy.set_param("controller_request", 1)
-                wait_till_done("controller_done", "Done Controller", rate)
-                rospy.set_param("controller_done", 0)
-                rospy.set_param("trac_ik_done", 0)
+            run_times=run_times+1
 
         rospy.logwarn ("Done Executing State Machine")
         setup_variables()
