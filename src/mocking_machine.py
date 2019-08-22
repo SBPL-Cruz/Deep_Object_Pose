@@ -91,12 +91,16 @@ def main():
     rospy.init_node('mocking_machine')
     setup_variables()
 
-    # go to dummy goal
+    # go to dummy goal from current robot state
     position = np.array([0.25, -0.40, 0.80])
     orientation = np.array([0.0, 0.0, 0.7071068, 0.7071068])
-    testing_goal = create_pose_from_vectors(position, orientation)
-    plan_to_custom_goal(testing_goal)
-
+    testing_goal_from_current = create_pose_from_vectors(position, orientation)
+    plan_to_custom_goal(testing_goal_from_current)
+    # go to dummy goal from the last robot state
+    rospy.set_param("from_current_state", 0)
+    position = np.array([0.25, -0.30, 0.80])
+    testing_goal_from_last = create_pose_from_vectors(position, orientation)
+    plan_to_custom_goal(testing_goal_from_last)
 
 if __name__ == '__main__':
     main()
