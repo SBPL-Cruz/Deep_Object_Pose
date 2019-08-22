@@ -22,6 +22,7 @@ import rospkg
 
 import rosparam
 from geometry_msgs.msg import PoseStamped, Pose
+from ar_track_alvar_msgs.msg import AlvarMarkers 
 from time import sleep
 from sensor_msgs.msg import JointState
 
@@ -163,7 +164,7 @@ def joint_state_callback(data):
 
 #TODO: hardcode the threshold 1.25m and 0.75m
 def object_pose_callback(marker):
-    target_publiser = rospy.Publisher('/Object_Position', ar_track_alvar_msga::AlvarMarkers, queue_size=2)
+    target_publiser = rospy.Publisher('/Object_Position',AlvarMarkers, queue_size=2)
     #TODO: assuming x is the axis that's changing
     pst = marker.pose.pose.position.x;
 
@@ -182,7 +183,7 @@ def object_recognition_buffer(current_state, done_msg, rate):
                 break
             else:
                 #TODO: subscriber to the published topics
-                rospy.Subscriber("TODO", ar_track_alvar_msga::AlvarMarkers ,object_pose_callback)
+                rospy.Subscriber("TODO",AlvarMarkers ,object_pose_callback)
             rate.sleep()
         except KeyboardInterrupt:
             print('interrupted!')
