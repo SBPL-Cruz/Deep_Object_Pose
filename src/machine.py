@@ -212,15 +212,6 @@ if __name__ == "__main__":
             rospy.set_param("hand_open_request", 1)
             start_octomap_server()
 
-            rospy.logwarn ("Requesting Object")
-            rospy.set_param("object_recognition_request", 1)
-            wait_till_done("object_recognition_done", "Done Object", rate)
-
-            if '--include_table_pose' in myargv:
-                rospy.logwarn ("Requesting Table Segmentation")
-                rospy.set_param("table_segmentation_request", 1)
-                wait_till_done("table_segmentation_done", "Done Table Segmentation", rate)
-
             if '--custom_home_state' in myargv:
                 # Use the planner to go to a custom home location
                 rospy.logwarn ("Requesting Hand to Custom Home State")
@@ -230,87 +221,98 @@ if __name__ == "__main__":
                 yaml_path = '{}/experiments/{}'.format(planner_path, config_name)
 
                 pose = Pose()
-                pose.position.x, pose.position.y, pose.position.z = (0.304, -0.507, 0.795)
+                # pose.position.x, pose.position.y, pose.position.z = (0.304, -0.507, 0.795)
+                pose.position.x, pose.position.y, pose.position.z = (0.4, -0.2, 0.9)
                 pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w \
                     = (0.282, 0.155, 0.702, 0.635)
                 pose_in_map = get_transform_pose('base_footprint', 'map', pose)
                 load_yaml(yaml_path, "initial_configuration/joint_state")
 
-                go_to_custom_goal(pose_in_map, rate, "FULLBODY", controller=False)
-
-            rospy.logwarn ("Requesting Grasp")
-            rospy.set_param("grasp_request", 1)
-            wait_till_done("grasp_done", "Done Grasp", rate)
-            if '--custom_home_state' in myargv:
-                # If custom home state was used the new goal state would be in this file
-                config_name = "walker_goal_custom_home.yaml"
-                yaml_path = '{}/experiments/{}'.format(planner_path, config_name)
-                load_yaml(yaml_path, "initial_configuration/joint_state")
+                go_to_custom_goal(pose_in_map, rate, "FULLBODY", controller=True)
             else:
-                # Read original goal state for hand by the side
-                config_name = "walker_goal.yaml"
-                yaml_path = '{}/experiments/{}'.format(planner_path, config_name)
-                load_yaml(yaml_path, "initial_configuration/joint_state")
 
-            rospy.logwarn ("Requesting Planner")
-            rospy.set_param("walker_planner_mode", "FULLBODY")
-            rospy.set_param("walker_planner_request", 1)
-            wait_till_done("walker_planner_done", "Done Planner", rate)
-            rospy.set_param("walker_planner_done", 0)
+                rospy.logwarn ("Requesting Object")
+                rospy.set_param("object_recognition_request", 1)
+                wait_till_done("object_recognition_done", "Done Object", rate)
 
-            rospy.logwarn ("Requesting Controller")
-            rospy.set_param("skip_states", 1)
-            rospy.set_param("controller_request", 1)
-            wait_till_done("controller_done", "Done Controller", rate)
-            rospy.set_param("controller_done", 0)
+                if '--include_table_pose' in myargv:
+                    rospy.logwarn ("Requesting Table Segmentation")
+                    rospy.set_param("table_segmentation_request", 1)
+                    wait_till_done("table_segmentation_done", "Done Table Segmentation", rate)
 
-            if '--incl_trac_ik' in myargv:
-                # Rerun grasping in case base moved
-                # rospy.logwarn ("Requesting Object Again")
-                # rospy.set_param("object_recognition_request", 1)
-                # wait_till_done("object_recognition_done", "Done Object", rate)
-                #
-                # rospy.logwarn ("Requesting Grasp Again")
-                # rospy.set_param("grasp_request", 1)
-                # wait_till_done("grasp_done", "Done Grasp", rate)
+                rospy.logwarn ("Requesting Grasp")
+                rospy.set_param("grasp_request", 1)
+                wait_till_done("grasp_done", "Done Grasp", rate)
+                if '--custom_home_state' in myargv:
+                    # If custom home state was used the new goal state would be in this file
+                    config_name = "walker_goal_custom_home.yaml"
+                    yaml_path = '{}/experiments/{}'.format(planner_path, config_name)
+                    load_yaml(yaml_path, "initial_configuration/joint_state")
+                else:
+                    # Read original goal state for hand by the side
+                    config_name = "walker_goal.yaml"
+                    yaml_path = '{}/experiments/{}'.format(planner_path, config_name)
+                    load_yaml(yaml_path, "initial_configuration/joint_state")
 
-                rospy.logwarn ("Requesting Trac IK")
-                rospy.set_param("lift_request", 0)
-                rospy.set_param("trac_ik_request", 1)
-                wait_till_done("trac_ik_done", "Done Trac IK", rate)
+                rospy.logwarn ("Requesting Planner")
+                rospy.set_param("walker_planner_mode", "FULLBODY")
+                rospy.set_param("walker_planner_request", 1)
+                wait_till_done("walker_planner_done", "Done Planner", rate)
+                rospy.set_param("walker_planner_done", 0)
 
                 rospy.logwarn ("Requesting Controller")
-                rospy.set_param("skip_states", 0)
-                rospy.set_param("controller_request", 1)
-                wait_till_done("controller_done", "Done Controller", rate)
-                rospy.set_param("grasp_done", 0)
-                rospy.set_param("controller_done", 0)
-                rospy.set_param("trac_ik_done", 0)
-
-                rospy.logwarn ("Requesting Hand Close")
-                rospy.set_param("hand_close_request", 1)
-
-                # Go back to custom home state using planner
-                # if '--custom_home_state' in myargv:
-                # pose = Pose()
-                # pose.position.x, pose.position.y, pose.position.z = (0.304, -0.507, 0.795)
-                # pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w \
-                #     = (0.282, 0.155, 0.702, 0.635)
-                # pose_in_map = get_transform_pose('base_footprint', 'map', pose)
-                # rospy.Subscriber("/walker/rightLimb/joint_states", JointState, joint_state_callback)
-                rospy.logwarn ("Requesting Trac IK")
-                rospy.set_param("lift_request", 1)
-                sleep(2)
-                # go_to_custom_goal(pose_in_map, rate, "FULLBODY", controller=True)
-                rospy.set_param("trac_ik_request", 1)
-                wait_till_done("trac_ik_done", "Done Trac IK", rate)
-
-                rospy.logwarn ("Requesting Controller")
-                rospy.set_param("skip_states", 0)
+                rospy.set_param("skip_states", 1)
                 rospy.set_param("controller_request", 1)
                 wait_till_done("controller_done", "Done Controller", rate)
                 rospy.set_param("controller_done", 0)
-                rospy.set_param("trac_ik_done", 0)
+
+                if '--incl_trac_ik' in myargv:
+                    # Rerun grasping in case base moved
+                    # rospy.logwarn ("Requesting Object Again")
+                    # rospy.set_param("object_recognition_request", 1)
+                    # wait_till_done("object_recognition_done", "Done Object", rate)
+                    #
+                    # rospy.logwarn ("Requesting Grasp Again")
+                    # rospy.set_param("grasp_request", 1)
+                    # wait_till_done("grasp_done", "Done Grasp", rate)
+
+                    rospy.logwarn ("Requesting Trac IK")
+                    rospy.set_param("lift_request", 0)
+                    rospy.set_param("trac_ik_request", 1)
+                    wait_till_done("trac_ik_done", "Done Trac IK", rate)
+
+                    rospy.logwarn ("Requesting Controller")
+                    rospy.set_param("skip_states", 0)
+                    rospy.set_param("controller_request", 1)
+                    wait_till_done("controller_done", "Done Controller", rate)
+                    rospy.set_param("grasp_done", 0)
+                    rospy.set_param("controller_done", 0)
+                    rospy.set_param("trac_ik_done", 0)
+
+                    rospy.logwarn ("Requesting Hand Close")
+                    rospy.set_param("hand_close_request", 1)
+
+                    # Go back to custom home state using planner
+                    # if '--custom_home_state' in myargv:
+                    # pose = Pose()
+                    # pose.position.x, pose.position.y, pose.position.z = (0.304, -0.507, 0.795)
+                    # pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w \
+                    #     = (0.282, 0.155, 0.702, 0.635)
+                    # pose_in_map = get_transform_pose('base_footprint', 'map', pose)
+                    # rospy.Subscriber("/walker/rightLimb/joint_states", JointState, joint_state_callback)
+                    rospy.logwarn ("Requesting Trac IK")
+                    rospy.set_param("lift_request", 1)
+                    sleep(2)
+                    # go_to_custom_goal(pose_in_map, rate, "FULLBODY", controller=True)
+                    rospy.set_param("trac_ik_request", 1)
+                    wait_till_done("trac_ik_done", "Done Trac IK", rate)
+
+                    rospy.logwarn ("Requesting Controller")
+                    rospy.set_param("skip_states", 0)
+                    rospy.set_param("controller_request", 1)
+                    wait_till_done("controller_done", "Done Controller", rate)
+                    rospy.set_param("controller_done", 0)
+                    rospy.set_param("trac_ik_done", 0)
 
         rospy.logwarn ("Done Executing State Machine")
         setup_variables()
