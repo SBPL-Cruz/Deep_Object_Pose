@@ -22,6 +22,7 @@ import rospkg
 
 import rosparam
 from geometry_msgs.msg import PoseStamped, Pose
+from ar_track_alvar_msgs.msg import AlvarMarkers 
 from time import sleep
 from sensor_msgs.msg import JointState
 
