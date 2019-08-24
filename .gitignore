@@ -3,3 +3,5 @@
 *._
 *.png
 __pycache__
+venv/
+src/log
