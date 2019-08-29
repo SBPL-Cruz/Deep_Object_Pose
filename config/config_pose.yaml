@@ -1,8 +1,8 @@
 topic_camera: "/dope/webcam/image_raw"
 topic_camera_info: "/dope/webcam/camera_info"
 topic_publishing: "dope"
-input_is_rectified: True   # Whether the input image is rectified (strongly suggested!)
-downscale_height: 500      # if the input image is larger than this, scale it down to this pixel height
+input_is_rectified: False   # Whether the input image is rectified (strongly suggested!)
+downscale_height: 400      # if the input image is larger than this, scale it down to this pixel height
 
 # Comment any of these lines to prevent detection / pose estimation of that object
 weights: {
@@ -10,40 +10,59 @@ weights: {
     # "gelatin":"package://dope/weights/gelatin_60.pth",
     # "meat":"package://dope/weights/meat_20.pth",
     # "mustard":"package://dope/weights/mustard_60.pth",
-    "soup":"package://dope/weights/soup_60.pth",
+    # "soup":"package://dope/weights/soup_60.pth",
+    "pepsi_can":"package://dope/weights/pepsi_can_60k.pth",
+    "coke_bottle":"package://dope/weights/coke_bottle_60k.pth",
+    # "coke_can":"package://dope/weights/coke_can_60k.pth",
+    # "sprite_bottle":"package://dope/weights/sprite_bottle_22k.pth",
+    # "pepsi_can":"package://dope/weights/pepsi_can_111k.pth",
     #"sugar":"package://dope/weights/sugar_60.pth"
     # "bleach":"package://dope/weights/bleach_28_dr.pth"
 }
 
 # Cuboid dimension in cm x,y,z
 dimensions: {
-    "cracker": [16.403600692749023,21.343700408935547,7.179999828338623],
-    "gelatin": [8.918299674987793, 7.311500072479248, 2.9983000755310059],
-    "meat": [10.164673805236816,8.3542995452880859,5.7600898742675781],
-    "mustard": [9.6024150848388672,19.130100250244141,5.824894905090332],
-    "soup": [6.7659378051757813,10.185500144958496,6.771425724029541],
-    "sugar": [9.267730712890625,17.625339508056641,4.5134143829345703],
-    "bleach": [10.267730712890625,26.625339508056641,7.5134143829345703],
+    # "cracker": [16.403600692749023,21.343700408935547,7.179999828338623],
+    # "gelatin": [8.918299674987793, 7.311500072479248, 2.9983000755310059],
+    # "meat": [10.164673805236816,8.3542995452880859,5.7600898742675781],
+    # "mustard": [9.6024150848388672,19.130100250244141,5.824894905090332],
+    # "soup": [6.7659378051757813,10.185500144958496,6.771425724029541],
+    # "sugar": [9.267730712890625,17.625339508056641,4.5134143829345703],
+    # "bleach": [10.267730712890625,26.625339508056641,7.5134143829345703],
+    # "pepsi_can": [8.5678, 8.569, 16.7415],
+    # "coke_can": [8.5678, 8.569, 16.7415],
+    "pepsi_can": [8.7327995, 16.7596016, 8.7327995],
+    # "coke_can": [8.7327995, 16.7596016, 8.7327995],
+    # "sprite_bottle": [9.5756035, 34.4509888, 9.5756035],
+    "coke_bottle": [9.5756035, 34.4509888, 9.5756035],
 }
 
 class_ids: {
-    "cracker": 1,
-    "gelatin": 2,
-    "meat":    3,
-    "mustard": 4,
-    "soup":    5,
-    "sugar":   6,
-    "bleach":  7,
+    # "cracker": 1,
+    # "gelatin": 2,
+    # "meat":    3,
+    # "mustard": 4,
+    # "soup":    5,
+    # "sugar":   6,
+    # "bleach":  7,
+    "pepsi_can":  1,
+    # "coke_can":  2,
+    # "sprite_bottle":  3,
+    "coke_bottle":  4,
 }
 
 draw_colors: {
-    "cracker": [13, 255, 128],  # green
-    "gelatin": [255, 255, 255],  # while
-    "meat": [0, 104, 255],  # blue
-    "mustard": [217,12, 232],  # magenta
-    "soup": [255, 101, 0],  # orange
-    "sugar": [232, 222, 12],  # yellow
-    "bleach": [232, 222, 12],  # yellow
+    # "cracker": [13, 255, 128],  # green
+    # "gelatin": [255, 255, 255],  # 
+    # "meat": [0, 104, 255],  # blue
+    # "mustard": [217,12, 232],  # magenta
+    # "soup": [255, 101, 0],  # orange
+    # "sugar": [232, 222, 12],  # yellow
+    # "bleach": [232, 222, 12],  # yellow
+    "pepsi_can": [232, 222, 12],  # yellow
+    # "coke_can": [255, 255, 255],  # while
+    # "sprite_bottle": [0, 104, 255],  # blue
+    "coke_bottle": [255, 101, 0],  # orange
 }
 
 # optional: provide a transform that is applied to the pose returned by DOPE
@@ -79,7 +98,12 @@ mesh_scales: {
 }
 
 # Config params for DOPE
-thresh_angle: 0.5
-thresh_map: 0.01
-sigma: 3
-thresh_points: 0.1
+# thresh_angle: 0.5
+# thresh_map: 0.01
+# sigma: 3
+# thresh_points: 0.1
+
+thresh_angle: 0.75
+thresh_map: 0.005
+sigma: 2.00
+thresh_points: 0.05

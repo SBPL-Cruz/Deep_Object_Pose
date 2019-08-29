@@ -173,6 +173,7 @@ include_directories(
 catkin_install_python(PROGRAMS
   nodes/camera
   nodes/dope
+  nodes/dope_image
   scripts/train.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 

@@ -18,6 +18,7 @@ import torchvision.models as models
 import torchvision.transforms as transforms
 from scipy.ndimage.filters import gaussian_filter
 from torch.autograd import Variable
+import matplotlib.pyplot as plt
 
 # Import the definition of the neural network model and cuboids
 
@@ -252,11 +253,23 @@ class ObjectDetector(object):
         vertex2 = out[-1][0]
         aff = seg[-1][0]
 
+        # ObjectDetector.viz_layer(vertex2, n_filters=9)
         # Find objects from network output
         detected_objects = ObjectDetector.find_object_poses(vertex2, aff, pnp_solver, config)
 
         return detected_objects
 
+    @staticmethod
+    def viz_layer(layer, n_filters=9):
+        fig = plt.figure(figsize=(20, 20))
+        row = 1
+        for i in range(n_filters):
+            ax = fig.add_subplot(4, 5, i + 1, xticks=[], yticks=[])
+            # grab layer outputs
+            ax.imshow(np.squeeze(layer[i].cpu().data.numpy()), cmap='gray')
+            ax.set_title('Output %s' % str(i + 1))
+        plt.show()
+            
     @staticmethod
     def find_object_poses(vertex2, aff, pnp_solver, config):
         '''Detect objects given network output'''
@@ -293,7 +306,11 @@ class ObjectDetector(object):
         for j in range(vertex2.size()[0]):
             belief = vertex2[j].clone()
             map_ori = belief.cpu().data.numpy()
-            
+
+            # plt.figure()
+            # plt.imshow(np.squeeze(map_ori), cmap='gray')
+            # plt.show()
+
             map = gaussian_filter(belief.cpu().data.numpy(), sigma=config.sigma)
             p = 1
             map_left = np.zeros(map.shape)
@@ -315,6 +332,7 @@ class ObjectDetector(object):
                                 )
             peaks = zip(np.nonzero(peaks_binary)[1], np.nonzero(peaks_binary)[0]) 
             
+            # print(peaks)
             # Computing the weigthed average for localizing the peaks
             peaks = list(peaks)
             win = 5
@@ -341,6 +359,7 @@ class ObjectDetector(object):
                 # if the weights are all zeros
                 # then add the none continuous points
                 OFFSET_DUE_TO_UPSAMPLING = 0.4395
+                # OFFSET_DUE_TO_UPSAMPLING = 0
                 try:
                     peaks_avg.append(
                         (np.average(j_values, weights=weights) + OFFSET_DUE_TO_UPSAMPLING, \
@@ -359,6 +378,7 @@ class ObjectDetector(object):
             all_peaks.append(peaks_with_score_and_id)
             peak_counter += peaks_len
 
+        # print(all_peaks)
         objects = []
 
         # Check object centroid and build the objects if the centroid is found

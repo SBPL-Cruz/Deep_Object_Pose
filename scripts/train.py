@@ -83,7 +83,7 @@ import colorsys,math
 import warnings
 warnings.filterwarnings("ignore")
 os.environ["CUDA_VISIBLE_DEVICES"]="0,1,2,3,4,5,6,7"
-
+os.environ['TORCH_MODEL_ZOO'] = "/media/aditya/A69AFABA9AFA85D9/Cruzr/code/cruzr_planner_ws/src/Deep_Object_Pose/models"
 
 ##################################################
 # NEURAL NETWORK MODEL
@@ -1306,6 +1306,7 @@ net = DopeNetwork(pretrained=opt.pretrained).cuda()
 net = torch.nn.DataParallel(net,device_ids=opt.gpuids).cuda()
 
 if opt.net != '':
+    print("Using provided net")
     net.load_state_dict(torch.load(opt.net))
 
 parameters = filter(lambda p: p.requires_grad, net.parameters())

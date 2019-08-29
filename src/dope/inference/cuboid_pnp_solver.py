@@ -4,7 +4,7 @@
 
 import cv2
 import numpy as np
-from cuboid import CuboidVertexType
+from dope.inference.cuboid import CuboidVertexType
 from pyrr import Quaternion
 
 
@@ -51,13 +51,14 @@ class CuboidPNPSolver(object):
 
         # Fallback to default PNP algorithm base on OpenCV version
         if pnp_algorithm is None:
+            # print(CuboidPNPSolver.cv2majorversion)
             if CuboidPNPSolver.cv2majorversion == 2:
                 pnp_algorithm = cv2.CV_ITERATIVE
-            elif CuboidPNPSolver.cv2majorversion == 3:
+            elif CuboidPNPSolver.cv2majorversion >= 3:
                 pnp_algorithm = cv2.SOLVEPNP_ITERATIVE
                 # Alternative algorithms:
-                # pnp_algorithm = SOLVE_PNP_P3P  
-                # pnp_algorithm = SOLVE_PNP_EPNP        
+                # pnp_algorithm = cv2.SOLVE_PNP_P3P  
+                # pnp_algorithm = cv2.SOLVE_PNP_EPNP        
         
         location = None
         quaternion = None
@@ -82,7 +83,6 @@ class CuboidPNPSolver(object):
 
         # Can only do PNP if we have more than 3 valid points
         is_points_valid = valid_point_count >= 4
-
         if is_points_valid:
             
             ret, rvec, tvec = cv2.solvePnP(
