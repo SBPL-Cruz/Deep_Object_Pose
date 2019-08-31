@@ -335,27 +335,40 @@ def loadjson(path, objectsofinterest, img):
         "keypoints_3d":points_keypoints_3d,
         }
 
-def loadimages(root):
+def loadimages(root, use_left_only=False, ignore_scene=None):
     """
     Find all the images in the path and folders, return them in imgs. 
     """
     imgs = []
 
+
     def add_json_files(path,):
-        for imgpath in glob.glob(path+"/*.png"):
+        if use_left_only:
+            # print("Using left only")
+            pattern_1 = path+"/*.left.png"
+            pattern_2 = path+"/*.left.jpg"
+        else:
+            pattern_1 = path+"/*.png"
+            pattern_2 = path+"/*.jpg"
+
+        for imgpath in glob.glob(pattern_1):
             if exists(imgpath) and exists(imgpath.replace('png',"json")):
-                imgs.append((imgpath,imgpath.replace(path,"").replace("/",""),
-                    imgpath.replace('png',"json")))
-        for imgpath in glob.glob(path+"/*.jpg"):
+                if ignore_scene == None or (ignore_scene is not None and all(scene not in imgpath for scene in ignore_scene)):
+                    imgs.append((imgpath,imgpath.replace(path,"").replace("/",""),
+                        imgpath.replace('png',"json")))
+        for imgpath in glob.glob(pattern_2):
             if exists(imgpath) and exists(imgpath.replace('jpg',"json")):
-                imgs.append((imgpath,imgpath.replace(path,"").replace("/",""),
-                    imgpath.replace('jpg',"json")))
+                if ignore_scene == None or (ignore_scene is not None and all(scene not in imgpath for scene in ignore_scene)):
+                    # print(imgpath)
+                    imgs.append((imgpath,imgpath.replace(path,"").replace("/",""),
+                        imgpath.replace('jpg',"json")))
 
     def explore(path):
         if not os.path.isdir(path):
             return
         folders = [os.path.join(path, o) for o in os.listdir(path) 
                         if os.path.isdir(os.path.join(path,o))]
+        # print(folders)
         if len(folders)>0:
             for path_entry in folders:                
                 explore(path_entry)
@@ -363,7 +376,7 @@ def loadimages(root):
             add_json_files(path)
 
     explore(root)
-
+    # print(imgs)
     return imgs
 
 class MultipleVertexJson(data.Dataset):
@@ -384,6 +397,8 @@ class MultipleVertexJson(data.Dataset):
             sigma = 16,
             random_translation = (25.0,25.0),
             random_rotation = 15.0,
+            use_left_only = False,
+            ignore_scene = None,
             ):
         ###################
         self.objectsofinterest = objectsofinterest
@@ -401,15 +416,17 @@ class MultipleVertexJson(data.Dataset):
         self.data_size = data_size
         self.sigma = sigma
         self.random_translation = random_translation
+        self.use_left_only = use_left_only
         self.random_rotation = random_rotation
+        self.ignore_scene = ignore_scene
 
         def load_data(path):
             '''Recursively load the data.  This is useful to load all of the FAT dataset.'''
-            imgs = loadimages(path)
+            imgs = loadimages(path, use_left_only=self.use_left_only, ignore_scene=self.ignore_scene)
 
             # Check all the folders in path 
-            for name in os.listdir(str(path)):
-                imgs += loadimages(path +"/"+name)
+            # for name in os.listdir(str(path)):
+            #     imgs += loadimages(path +"/"+name, use_left_only=self.use_left_only)
             return imgs
 
 
@@ -1175,6 +1192,14 @@ parser.add_argument('--datasize',
     default=None, 
     help='randomly sample that number of entries in the dataset folder') 
 
+parser.add_argument('--left_only', 
+    action="store_true", 
+    help='Use left images only in the scene') 
+
+parser.add_argument('--ignore_scene', 
+    default=None, 
+    help='Ignore scene for eg kitchen_4') 
+
 # Read the config but do not overwrite the args written 
 args, remaining_argv = conf_parser.parse_known_args()
 defaults = { "option":"default" }
@@ -1184,9 +1209,15 @@ if args.config:
     config.read([args.config])
     defaults.update(dict(config.items("defaults")))
 
+
 parser.set_defaults(**defaults)
 parser.add_argument("--option")
 opt = parser.parse_args(remaining_argv)
+
+print("Using left images only in NDDS : {}".format(opt.left_only))
+if opt.ignore_scene is not None:    
+    opt.ignore_scene = opt.ignore_scene.split(",")
+print("Ignoring scene in NDDS : {}".format(opt.ignore_scene))
 
 if opt.pretrained in ['false', 'False']:
 	opt.pretrained = False
@@ -1254,6 +1285,8 @@ if not opt.data == "":
         target_transform = transforms.Compose([
                                transforms.Scale(opt.imagesize//8),
             ]),
+        use_left_only = opt.left_only,
+        ignore_scene=opt.ignore_scene
         )
     trainingdata = torch.utils.data.DataLoader(train_dataset,
         batch_size = opt.batchsize, 

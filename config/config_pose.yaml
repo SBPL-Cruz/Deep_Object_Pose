@@ -11,11 +11,12 @@ weights: {
     # "meat":"package://dope/weights/meat_20.pth",
     # "mustard":"package://dope/weights/mustard_60.pth",
     # "soup":"package://dope/weights/soup_60.pth",
-    "pepsi_can":"package://dope/weights/pepsi_can_60k.pth",
-    "coke_bottle":"package://dope/weights/coke_bottle_60k.pth",
+    # "pepsi_can":"package://dope/weights/pepsi_can_60k.pth",
+    # "coke_bottle":"package://dope/weights/coke_bottle_60k.pth",
     # "coke_can":"package://dope/weights/coke_can_60k.pth",
-    # "sprite_bottle":"package://dope/weights/sprite_bottle_22k.pth",
-    # "pepsi_can":"package://dope/weights/pepsi_can_111k.pth",
+    "sprite_bottle":"package://dope/weights/sprite_bottle_60k.pth",
+    # "sprite_can":"package://dope/weights/sprite_can_60k.pth",
+    # "7up_can":"package://dope/weights/7up_can_60k.pth",
     #"sugar":"package://dope/weights/sugar_60.pth"
     # "bleach":"package://dope/weights/bleach_28_dr.pth"
 }
@@ -32,7 +33,9 @@ dimensions: {
     # "pepsi_can": [8.5678, 8.569, 16.7415],
     # "coke_can": [8.5678, 8.569, 16.7415],
     "pepsi_can": [8.7327995, 16.7596016, 8.7327995],
-    # "coke_can": [8.7327995, 16.7596016, 8.7327995],
+    "sprite_can": [8.7327995, 16.7596016, 8.7327995],
+    "coke_can": [8.7327995, 16.7596016, 8.7327995],
+    "7up_can": [8.7327995, 16.7596016, 8.7327995],
     # "sprite_bottle": [9.5756035, 34.4509888, 9.5756035],
     "coke_bottle": [9.5756035, 34.4509888, 9.5756035],
 }
@@ -46,9 +49,11 @@ class_ids: {
     # "sugar":   6,
     # "bleach":  7,
     "pepsi_can":  1,
-    # "coke_can":  2,
-    # "sprite_bottle":  3,
+    "coke_can":  2,
+    "sprite_bottle":  3,
     "coke_bottle":  4,
+    "sprite_can":  5,
+    "7up_can":  6,
 }
 
 draw_colors: {
@@ -60,9 +65,11 @@ draw_colors: {
     # "sugar": [232, 222, 12],  # yellow
     # "bleach": [232, 222, 12],  # yellow
     "pepsi_can": [232, 222, 12],  # yellow
-    # "coke_can": [255, 255, 255],  # while
-    # "sprite_bottle": [0, 104, 255],  # blue
+    "sprite_can": [217,12, 232],  # yellow
+    "coke_can": [255, 255, 255],  # while
+    "sprite_bottle": [0, 104, 255],  # blue
     "coke_bottle": [255, 101, 0],  # orange
+    "7up_can": [255, 101, 0],  # orange
 }
 
 # optional: provide a transform that is applied to the pose returned by DOPE
