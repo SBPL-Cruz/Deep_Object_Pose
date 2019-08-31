@@ -83,7 +83,7 @@ import colorsys,math
 import warnings
 warnings.filterwarnings("ignore")
 os.environ["CUDA_VISIBLE_DEVICES"]="0,1,2,3,4,5,6,7"
-os.environ['TORCH_MODEL_ZOO'] = "/media/aditya/A69AFABA9AFA85D9/Cruzr/code/cruzr_planner_ws/src/Deep_Object_Pose/models"
+# os.environ['TORCH_MODEL_ZOO'] = "/media/aditya/A69AFABA9AFA85D9/Cruzr/code/cruzr_planner_ws/src/Deep_Object_Pose/models"
 
 ##################################################
 # NEURAL NETWORK MODEL
@@ -1200,6 +1200,10 @@ parser.add_argument('--ignore_scene',
     default=None, 
     help='Ignore scene for eg kitchen_4') 
 
+parser.add_argument('--model_zoo', 
+    default=None, 
+    help='Torch path to download pretrained models') 
+
 # Read the config but do not overwrite the args written 
 args, remaining_argv = conf_parser.parse_known_args()
 defaults = { "option":"default" }
@@ -1213,6 +1217,9 @@ if args.config:
 parser.set_defaults(**defaults)
 parser.add_argument("--option")
 opt = parser.parse_args(remaining_argv)
+
+if opt.model_zoo is not None:
+    os.environ['TORCH_MODEL_ZOO'] = opt.model_zoo
 
 print("Using left images only in NDDS : {}".format(opt.left_only))
 if opt.ignore_scene is not None:    
