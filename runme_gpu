@@ -1,0 +1,1 @@
+python scripts/train.py --gpuids 0 1 --batchsize 64  --data /pylon5/ir5fq3p/likhache/aditya/NewMap1_dope  --object coke_bottle --outf coke_bottle
