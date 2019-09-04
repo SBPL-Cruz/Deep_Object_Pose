@@ -163,31 +163,31 @@ def joint_state_callback(data):
     rospy.set_param('initial_configuration/joint_state', joint_position_list)
 
 #TODO: hardcode the threshold 1.25m and 0.75m
-def object_pose_callback(marker):
-    target_publiser = rospy.Publisher('/Object_Position',AlvarMarkers, queue_size=2)
+def object_pose_callback(pose):
+    target_publiser = rospy.Publisher('/Grasp', PoseStamped, queue_size=2)
     #TODO: assuming x is the axis that's changing
-    pst = marker.pose.pose.position.x;
+    #if marker.markers: 
 
+    #pst = marker.markers[0].pose.pose.position.y;
+    pst = pose.pose.position.y;
     if pst < 1.25 and rospy.get_param("object_recognition_done") == 0:
-        rospy.set_param("object_recognition_done",1);
-        target_publiser.publish(marker);
+    	rospy.set_param("object_recognition_done",1);
+        target_publiser.publish(pose);
+	print("Pose published")
     elif pst < 0.75 and rospy.get_param("object_recognition_done") == 1:
-        rospy.set_param("object_recognition_done",2);
-        target_publiser.publish(marker);
+       	rospy.set_param("object_recognition_done",2);
+        target_publiser.publish(pose);
+	print("Pose published")
 
 def object_recognition_buffer(current_state, done_msg, rate):
     while not rospy.is_shutdown():
-        try:
-            if (rospy.get_param("object_recognition_done") != current_state ):
-                rospy.logwarn (done_msg)
-                break
-            else:
-                #TODO: subscriber to the published topics
-                rospy.Subscriber("TODO",AlvarMarkers ,object_pose_callback)
+        if (rospy.get_param("object_recognition_done") != current_state ):
+            rospy.logwarn (done_msg)
+            break
+        else:
+            #rospy.Subscriber("/ar_pose_marker", AlvarMarkers ,object_pose_callback)
+            rospy.Subscriber("/pose_filtered",  PoseStamped, object_pose_callback)
             rate.sleep()
-        except KeyboardInterrupt:
-            print('interrupted!')
-
 
 if __name__ == "__main__":
 
@@ -227,16 +227,15 @@ if __name__ == "__main__":
 
             #TODO: map is not used in the world, need another transformation
             #TODO:
-            pose_in_map = get_transform_pose('base_footprint', 'map', pose)
+            pose_in_map = get_transform_pose('base_footprint', 'base_footprint', pose)
             load_yaml(yaml_path, "initial_configuration/joint_state")
             go_to_custom_goal(pose_in_map, rate, "FULLBODY", controller=False)
 
         while run_times < 2:
 
-            # sleep(30)
-            # gain - 0.4 - angular, same for last state angular, max - 0.4
             rospy.logwarn ("Requesting Object")
             rospy.set_param("object_recognition_request", 0)
+            rospy.set_param("walker_planner_request", 1)
             object_recognition_buffer(rospy.get_param("object_recognition_done"),"Done Object", rate)
 
             
@@ -244,22 +243,10 @@ if __name__ == "__main__":
             # rospy.set_param("grasp_request", 1)
             # wait_till_done("grasp_done", "Done Grasp", rate)
 
-            if '--custom_home_state' in myargv:
-                # If custom home state was used the new goal state would be in this file
-                config_name = "walker_goal_custom_home.yaml"
-                yaml_path = '{}/experiments/{}'.format(planner_path, config_name)
-                load_yaml(yaml_path, "initial_configuration/joint_state")
-            else:
-                # Read original goal state for hand by the side
-                config_name = "walker_goal.yaml"
-                yaml_path = '{}/experiments/{}'.format(planner_path, config_name)
-                load_yaml(yaml_path, "initial_configuration/joint_state")
-
             #TODO: will be adapted to the new planner when ready
             #TODO:
             rospy.logwarn ("Requesting Planner")
-            rospy.set_param("walker_planner_mode", "FULLBODY")
-            rospy.set_param("walker_planner_request", 1)
+            #rospy.set_param("walker_planner_mode", "FULLBODY")
             wait_till_done("walker_planner_done", "Done Planner", rate)
             rospy.set_param("walker_planner_done", 0)
 
