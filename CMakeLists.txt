@@ -213,3 +213,8 @@ catkin_install_python(
   src/machine.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
+catkin_install_python(
+  PROGRAMS
+  src/mocking_machine.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
