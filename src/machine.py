@@ -164,7 +164,7 @@ def joint_state_callback(data):
 
 #TODO: hardcode the threshold 1.25m and 0.75m
 def object_pose_callback(pose):
-    target_publiser = rospy.Publisher('/Grasp', PoseStamped, queue_size=2)
+    #target_publiser = rospy.Publisher('/Grasp', PoseStamped, queue_size=2)
     #TODO: assuming x is the axis that's changing
     #if marker.markers: 
 
@@ -172,11 +172,11 @@ def object_pose_callback(pose):
     pst = pose.pose.position.y;
     if pst < 1.25 and rospy.get_param("object_recognition_done") == 0:
     	rospy.set_param("object_recognition_done",1);
-        target_publiser.publish(pose);
+        #target_publiser.publish(pose);
 	print("Pose published")
     elif pst < 0.75 and rospy.get_param("object_recognition_done") == 1:
        	rospy.set_param("object_recognition_done",2);
-        target_publiser.publish(pose);
+        #target_publiser.publish(pose);
 	print("Pose published")
 
 def object_recognition_buffer(current_state, done_msg, rate):
@@ -201,7 +201,6 @@ if __name__ == "__main__":
         print(myargv)
 
         # if '--base_only' not in myargv:
-        run_times = 0
         rospy.set_param("hand_open_request", 1)
         #TODO: Conveyor_segmentation_requst
         #TODO:
@@ -231,6 +230,7 @@ if __name__ == "__main__":
             load_yaml(yaml_path, "initial_configuration/joint_state")
             go_to_custom_goal(pose_in_map, rate, "FULLBODY", controller=False)
 
+        run_times = 0
         while run_times < 2:
 
             rospy.logwarn ("Requesting Object")
