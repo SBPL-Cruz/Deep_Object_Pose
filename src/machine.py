@@ -170,14 +170,14 @@ def object_pose_callback(pose):
 
     #pst = marker.markers[0].pose.pose.position.y;
     pst = pose.pose.position.y;
-    if pst < 1.25 and rospy.get_param("object_recognition_done") == 0:
+    if pst < 0.60 and rospy.get_param("object_recognition_done") == 0:
     	rospy.set_param("object_recognition_done",1);
         #target_publiser.publish(pose);
 	print("Pose published")
-    elif pst < 0.75 and rospy.get_param("object_recognition_done") == 1:
-       	rospy.set_param("object_recognition_done",2);
+    #elif pst < 0.75 and rospy.get_param("object_recognition_done") == 1:
+       	#rospy.set_param("object_recognition_done",2);
         #target_publiser.publish(pose);
-	print("Pose published")
+	#print("Pose published")
 
 def object_recognition_buffer(current_state, done_msg, rate):
     while not rospy.is_shutdown():
@@ -187,13 +187,13 @@ def object_recognition_buffer(current_state, done_msg, rate):
         else:
             #rospy.Subscriber("/ar_pose_marker", AlvarMarkers ,object_pose_callback)
             rospy.Subscriber("/pose_filtered",  PoseStamped, object_pose_callback)
-            rate.sleep()
+            #rate.sleep()
 
 if __name__ == "__main__":
 
     try:
         rospy.init_node('cruiser_state_machine', anonymous=True, log_level=rospy.INFO)
-        rate = rospy.Rate(5)
+        rate = rospy.Rate(50)
         setup_variables()
         # sleep(10)
 
@@ -231,12 +231,12 @@ if __name__ == "__main__":
             go_to_custom_goal(pose_in_map, rate, "FULLBODY", controller=False)
 
         run_times = 0
-        while run_times < 2:
+        while run_times < 1:
 
             rospy.logwarn ("Requesting Object")
             rospy.set_param("object_recognition_request", 0)
-            rospy.set_param("walker_planner_request", 1)
             object_recognition_buffer(rospy.get_param("object_recognition_done"),"Done Object", rate)
+            rospy.set_param("walker_planner_request", 1)
 
             
             # rospy.logwarn ("Requesting Grasp")
@@ -255,8 +255,10 @@ if __name__ == "__main__":
             rospy.logwarn ("Requesting Controller")
             rospy.set_param("skip_states", 1)
             rospy.set_param("controller_request", 1)
-            # wait_till_done("controller_done", "Done Controller", rate)
+            wait_till_done("controller_done", "Done Controller", rate)
             rospy.set_param("controller_done", 0)
+	    rospy.sleep(3.0)
+    	    rospy.set_param("hand_close_request", 1)
 
             run_times=run_times+1
 
