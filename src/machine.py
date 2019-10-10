@@ -73,6 +73,23 @@ def wait_till_done(param, done_msg, rate):
         except KeyboardInterrupt:
             print('interrupted!')
 
+def release_object():
+    # go to end position and release
+    pose = Pose()
+    pose.position.x, pose.position.y, pose.position.z = (0.282, -0.30, 1.0)
+    pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w \
+        = (0.0, 0.0, 0.865, 0.500)
+    go_to_custom_goal(pose, rate, "FULLBODY", controller=True)
+    rospy.set_param("hand_open_request", 1)
+
+def control_execution(skipNum, rate):
+    rospy.logwarn ("Requesting Controller")
+    rospy.set_param("skip_states", skipNum)
+    rospy.set_param("controller_request", 1)
+    wait_till_done("controller_done", "Done Init Controller", rate)
+    rospy.set_param("controller_done", 0)
+
+
 def setup_variables():
     rospy.set_param("object_recognition_request", 0)
     rospy.set_param("object_recognition_done", 0)
@@ -88,7 +105,7 @@ def setup_variables():
     rospy.set_param("trac_ik_done", 0)
     rospy.set_param("lift_request", 0)
     rospy.set_param("skip_states", 1)
-    # rospy.set_param("hand_open_request", 1)
+    rospy.set_param("hand_open_request", 1)
 
 def load_yaml(yaml_path, ros_param_name):
 
@@ -135,21 +152,14 @@ def go_to_custom_goal(pose, rate, mode, controller=True):
     msg.header.frame_id = "base_footprint"
     msg.header.stamp = rospy.Time.now()
     msg.pose = pose
-    rospy.logwarn ("Requesting Initial Planner")
-    rospy.set_param("walker_planner_mode", mode)
+    rospy.logwarn ("Requesting Planner")
+    # rospy.set_param("walker_planner_mode", mode)
     rospy.set_param("walker_planner_request", 1)
-
     wait_till_done_and_publish("walker_planner_done", "Done Init Planner", rate, grasp_publisher, msg)
     rospy.set_param("walker_planner_done", 0)
 
     if controller:
-        rospy.logwarn ("Requesting Init Controller")
-        rospy.set_param("controller_request", 1)
-        rospy.set_param("skip_states", 0)
-        wait_till_done("controller_done", "Done Init Controller", rate)
-        rospy.set_param("controller_done", 0)
-    #else:
-        #sleep(10)
+        control_execution(0,rate)
 
 def joint_state_callback(data):
     # rospy.loginfo(rospy.get_caller_id() + "I heard %s", data.position)
@@ -194,21 +204,17 @@ if __name__ == "__main__":
         rospy.init_node('cruiser_state_machine', anonymous=True, log_level=rospy.INFO)
         rate = rospy.Rate(50)
         setup_variables()
-        # sleep(10)
 
         myargv = rospy.myargv(argv=sys.argv)
         print(myargv)
 
-        # if '--base_only' not in myargv:
-        rospy.set_param("hand_open_request", 1)
-        #TODO: Conveyor_segmentation_requst
-        #TODO:
+        '''
         if '--include_conveyor_pose' in myargv:
             rospy.logwarn ("Requesting Converyor Segmentation")
             rospy.set_param("Conveyor_segmentation_request", 1)
             wait_till_done("Conveyor_segmentation_done", "Done Conveyor Segmentation", rate)
+        '''
 
-        #TODO:
         #TODO: Don't know if the planner need this
         if '--custom_home_state' in myargv:
             # Use the planner to go to a custom home location
@@ -224,52 +230,32 @@ if __name__ == "__main__":
                  = (0.282, 0.155, 0.702, 0.635)
 
             #TODO: map is not used in the world, need another transformation
-            #TODO:
             pose_in_map = get_transform_pose('base_footprint', 'base_footprint', pose)
             load_yaml(yaml_path, "initial_configuration/joint_state")
             go_to_custom_goal(pose_in_map, rate, "FULLBODY", controller=False)
 
-        run_times = 0
-        while run_times < 1:
+        while not rospy.is_shutdown():
 
             rospy.logwarn ("Requesting Object")
             rospy.set_param("object_recognition_request", 0)
             object_recognition_buffer(rospy.get_param("object_recognition_done"),"Done Object", rate)
             rospy.set_param("walker_planner_request", 1)
-
             
             # rospy.logwarn ("Requesting Grasp")
             # rospy.set_param("grasp_request", 1)
             # wait_till_done("grasp_done", "Done Grasp", rate)
 
-            #TODO: will be adapted to the new planner when ready
-            #TODO:
             rospy.logwarn ("Requesting Planner")
-            #rospy.set_param("walker_planner_mode", "FULLBODY")
             wait_till_done("walker_planner_done", "Done Planner", rate)
             rospy.set_param("walker_planner_done", 0)
 
-            #TODO: do not wait for the controller
-            #TODO: planner should give set the mark once it starts
-            rospy.logwarn ("Requesting Controller")
-            rospy.set_param("skip_states", 1)
-            rospy.set_param("controller_request", 1)
-            wait_till_done("controller_done", "Done Controller", rate)
-            rospy.set_param("controller_done", 0)
-	    rospy.sleep(5.0)
+            control_execution(1, rate)
+
+            # Delay as we do not know when obj arrives
+            rospy.sleep(5.0)
     	    rospy.set_param("hand_close_request", 1)
 
-	    pose = Pose()
-            pose.position.x, pose.position.y, pose.position.z = (0.282, -0.30, 1.0)
-            pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w \
-                 = (0.0, 0.0, 0.865, 0.500)
-
-            #TODO: map is not used in the world, need another transformation
-            #TODO:
-            #pose_in_map = get_transform_pose('base_footprint', 'base_footprint', pose)
-            go_to_custom_goal(pose, rate, "FULLBODY", controller=True)
-
-            run_times=run_times+1
+            release_object();   
 
         rospy.logwarn ("Done Executing State Machine")
         setup_variables()
