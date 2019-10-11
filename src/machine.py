@@ -127,12 +127,12 @@ def get_transform_pose(source, target, pose):
 
 def go_to_custom_goal(pose, rate, mode, controller=True):
     grasp_publisher = rospy.Publisher(
-        '/Grasps',
+        '/pose_filtered',
         PoseStamped,
         queue_size=10
     )
     msg = PoseStamped()
-    msg.header.frame_id = "map"
+    msg.header.frame_id = "base_footprint"
     msg.header.stamp = rospy.Time.now()
     msg.pose = pose
     rospy.logwarn ("Requesting Initial Planner")
@@ -145,11 +145,11 @@ def go_to_custom_goal(pose, rate, mode, controller=True):
     if controller:
         rospy.logwarn ("Requesting Init Controller")
         rospy.set_param("controller_request", 1)
-        rospy.set_param("skip_states", 1)
+        rospy.set_param("skip_states", 0)
         wait_till_done("controller_done", "Done Init Controller", rate)
         rospy.set_param("controller_done", 0)
-    else:
-        sleep(10)
+    #else:
+        #sleep(10)
 
 def joint_state_callback(data):
     # rospy.loginfo(rospy.get_caller_id() + "I heard %s", data.position)
@@ -173,7 +173,6 @@ def object_pose_callback(pose):
     if pst < 0.60 and rospy.get_param("object_recognition_done") == 0:
     	rospy.set_param("object_recognition_done",1);
         #target_publiser.publish(pose);
-	print("Pose published")
     #elif pst < 0.75 and rospy.get_param("object_recognition_done") == 1:
        	#rospy.set_param("object_recognition_done",2);
         #target_publiser.publish(pose);
@@ -257,8 +256,18 @@ if __name__ == "__main__":
             rospy.set_param("controller_request", 1)
             wait_till_done("controller_done", "Done Controller", rate)
             rospy.set_param("controller_done", 0)
-	    rospy.sleep(3.0)
+	    rospy.sleep(5.0)
     	    rospy.set_param("hand_close_request", 1)
+
+	    pose = Pose()
+            pose.position.x, pose.position.y, pose.position.z = (0.282, -0.30, 1.0)
+            pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w \
+                 = (0.0, 0.0, 0.865, 0.500)
+
+            #TODO: map is not used in the world, need another transformation
+            #TODO:
+            #pose_in_map = get_transform_pose('base_footprint', 'base_footprint', pose)
+            go_to_custom_goal(pose, rate, "FULLBODY", controller=True)
 
             run_times=run_times+1
 
