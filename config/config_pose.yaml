@@ -7,14 +7,19 @@ downscale_height: 400      # if the input image is larger than this, scale it do
 # Comment any of these lines to prevent detection / pose estimation of that object
 weights: {
     # "cracker":"package://dope/weights/cracker_60.pth",
+    "003_cracker_box":"package://dope/weights/003_cracker_box_50k.pth",
+    # "003_cracker_box":"package://dope/weights/003_cracker_box_30k.pth",
     # "gelatin":"package://dope/weights/gelatin_60.pth",
-    # "meat":"package://dope/weights/meat_20.pth",
-    # "mustard":"package://dope/weights/mustard_60.pth",
+    "010_potted_meat_can":"package://dope/weights/010_potted_meat_can_50k.pth",
+    "002_master_chef_can":"package://dope/weights/002_master_chef_can_50k.pth",
+    "006_mustard_bottle":"package://dope/weights/006_mustard_bottle_50k.pth",
+    "025_mug":"package://dope/weights/025_mug_50k.pth",
+    "024_bowl":"package://dope/weights/024_bowl_50k.pth",
     # "soup":"package://dope/weights/soup_60.pth",
     # "pepsi_can":"package://dope/weights/pepsi_can_60k.pth",
     # "coke_bottle":"package://dope/weights/coke_bottle_60k.pth",
     # "coke_can":"package://dope/weights/coke_can_60k.pth",
-    "sprite_bottle":"package://dope/weights/sprite_bottle_60k.pth",
+    # "sprite_bottle":"package://dope/weights/sprite_bottle_60k.pth",
     # "sprite_can":"package://dope/weights/sprite_can_60k.pth",
     # "7up_can":"package://dope/weights/7up_can_60k.pth",
     #"sugar":"package://dope/weights/sugar_60.pth"
@@ -23,11 +28,14 @@ weights: {
 
 # Cuboid dimension in cm x,y,z
 dimensions: {
+    "003_cracker_box": [16.403600692749023,21.343700408935547,7.179999828338623],
     # "cracker": [16.403600692749023,21.343700408935547,7.179999828338623],
     # "gelatin": [8.918299674987793, 7.311500072479248, 2.9983000755310059],
-    # "meat": [10.164673805236816,8.3542995452880859,5.7600898742675781],
-    # "mustard": [9.6024150848388672,19.130100250244141,5.824894905090332],
-    # "soup": [6.7659378051757813,10.185500144958496,6.771425724029541],
+    "010_potted_meat_can": [10.164673805236816,8.3542995452880859,5.7600898742675781],
+    "006_mustard_bottle": [9.6024150848388672,19.130100250244141,5.824894905090332],
+    "002_master_chef_can": [10.20404,14.0177,10.2309],
+    "025_mug": [11.699,8.1303,9.30884],
+    "024_bowl": [16.1164,5.5009,16.1463],
     # "sugar": [9.267730712890625,17.625339508056641,4.5134143829345703],
     # "bleach": [10.267730712890625,26.625339508056641,7.5134143829345703],
     # "pepsi_can": [8.5678, 8.569, 16.7415],
@@ -43,9 +51,11 @@ dimensions: {
 class_ids: {
     # "cracker": 1,
     # "gelatin": 2,
-    # "meat":    3,
-    # "mustard": 4,
-    # "soup":    5,
+    "010_potted_meat_can":    8,
+    "006_mustard_bottle": 9,
+    "002_master_chef_can":    10,
+    "025_mug":    11,
+    "024_bowl":    12,
     # "sugar":   6,
     # "bleach":  7,
     "pepsi_can":  1,
@@ -54,15 +64,18 @@ class_ids: {
     "coke_bottle":  4,
     "sprite_can":  5,
     "7up_can":  6,
+    "003_cracker_box":  7,
 }
 
 draw_colors: {
+    "003_cracker_box": [13, 255, 128],  # green
     # "cracker": [13, 255, 128],  # green
     # "gelatin": [255, 255, 255],  # 
-    # "meat": [0, 104, 255],  # blue
-    # "mustard": [217,12, 232],  # magenta
-    # "soup": [255, 101, 0],  # orange
-    # "sugar": [232, 222, 12],  # yellow
+    "010_potted_meat_can": [0, 104, 255],  # blue
+    "006_mustard_bottle": [217,12, 232],  # magenta
+    "002_master_chef_can": [255, 101, 0],  # orange
+    "025_mug": [232, 222, 12],  # yellow
+    "024_bowl": [232, 222, 12],  # yellow
     # "bleach": [232, 222, 12],  # yellow
     "pepsi_can": [232, 222, 12],  # yellow
     "sprite_can": [217,12, 232],  # yellow
