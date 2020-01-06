@@ -31,6 +31,7 @@ from visualization_msgs.msg import Marker, MarkerArray
 import pcl
 import ros_numpy
 from plyfile import PlyData, PlyElement
+import time
 
 class Draw(object):
     """Drawing helper class to visualize the neural network output"""
@@ -374,6 +375,7 @@ class DopeNode(object):
     def image_callback(self, image_msg, camera_info, cloud_in=None):
         """Image callback"""
 
+        start_time = time.time()
         if self.use_icp:
             cloud_scene = self.cloud_callback(cloud_in)
         img = self.cv_bridge.imgmsg_to_cv2(image_msg, "rgb8")
@@ -441,7 +443,6 @@ class DopeNode(object):
                         total_transform = tf.transformations.concatenate_matrices(T_1, R_1, T, R)
                         cloud_filtered_array = self.transform_cloud(self.mesh_clouds[result["name"]], mat=total_transform)
 
-                        
                     except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
                         rospy.logwarn("Couldn't transform cloud")
                         
@@ -522,6 +523,9 @@ class DopeNode(object):
         )
         self.pub_detections.publish(detection_array)
         self.publish_markers(detection_array)
+
+        print("--- Estimation took %s seconds ---" % (time.time() - start_time))
+
 
     def publish_markers(self, detection_array):
         # Delete all existing markers
