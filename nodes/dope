@@ -131,7 +131,11 @@ class DopeNode(object):
         self.camera_frame =  rospy.get_param("~camera_frame", "/camera_depth_optical_frame")
         self.zmin = rospy.get_param('~zmin', 0.5)
         self.zmax = rospy.get_param('~zmax', 1.0)
-
+        self.xmin = rospy.get_param('~xmin', 0.0)
+        self.xmax = rospy.get_param('~xmax', 1.0)
+        self.downsampling_leaf_size = rospy.get_param('~downsampling_leaf_size', 0.02)
+        self.track_pose_accuracy = rospy.get_param('~track_pose_accuracy', False)
+        self.min_pose_error = {}
         # For each object to detect, load network model, create PNP solver, and start ROS publishers
         for model, weights_url in rospy.get_param('~weights').iteritems():
             self.models[model] = \
@@ -140,6 +144,7 @@ class DopeNode(object):
                     resource_retriever.get_filename(weights_url, use_protocol=False)
                 )
             self.models[model].load_net_model()
+            self.min_pose_error[model] = np.inf
 
             try:
                 M = np.array(rospy.get_param('~model_transforms')[model], dtype='float64')
@@ -166,7 +171,7 @@ class DopeNode(object):
                 cloud_pose = pcl.PointCloud()
                 cloud_pose.from_array(cloud)
                 sor = cloud_pose.make_voxel_grid_filter()
-                sor.set_leaf_size(0.02, 0.02, 0.02)
+                sor.set_leaf_size(self.downsampling_leaf_size, self.downsampling_leaf_size, self.downsampling_leaf_size)
                 cloud_pose = sor.filter()
 
                 self.mesh_clouds[model] = np.asarray(cloud_pose)
@@ -176,8 +181,6 @@ class DopeNode(object):
                 # cloud = np.hstack((cloud, np.ones((cloud.shape[0], 1))))
                 # cloud = np.matmul(scale_transform, np.transpose(cloud))
                 # self.mesh_clouds[model] = np.transpose(cloud)[:, :3]
-
-                
             except KeyError:
                 pass
 
@@ -338,7 +341,7 @@ class DopeNode(object):
         return msg
 
     def cloud_callback(self, cloud_msg):
-        rospy.logwarn("Cloud received, frame : {}".format(cloud_msg.header.frame_id))
+        rospy.logdebug("Cloud received, frame : {}".format(cloud_msg.header.frame_id))
         latest_image_msg = self.rgb_image_cache.getElemBeforeTime(cloud_msg.header.stamp)
         if latest_image_msg is not None and self.camera_info is not None:
             self.image_callback(latest_image_msg, self.camera_info, cloud_msg)
@@ -350,11 +353,7 @@ class DopeNode(object):
             3. Downsample
             4. Publish and return filtered cloud
         '''
-        rospy.logwarn("Cloud received, frame : {}".format(cloud_msg.header.frame_id))
-        # try:
-        #     trans, rot = self.tf_listener.lookupTransform(self.world_frame, cloud_msg.header.frame_id, rospy.Time(0))
-        # except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
-        #     rospy.logwarn ("Couldnt transform cloud")
+        rospy.logdebug("Cloud received, frame : {}".format(cloud_msg.header.frame_id))
 
         pc = ros_numpy.numpify(cloud_msg)
         height = pc.shape[0]
@@ -377,12 +376,12 @@ class DopeNode(object):
 
         passthrough = cloud_filtered.make_passthrough_filter()
         passthrough.set_filter_field_name("x")
-        passthrough.set_filter_limits(0.0, 0.6)
+        passthrough.set_filter_limits(self.xmin, self.xmax)
         cloud_filtered = passthrough.filter()
 
 
         sor = cloud_filtered.make_voxel_grid_filter()
-        sor.set_leaf_size(0.02, 0.02, 0.02)
+        sor.set_leaf_size(self.downsampling_leaf_size, self.downsampling_leaf_size, self.downsampling_leaf_size)
         cloud_filtered = sor.filter()
 
         # fil = cloud_filtered.make_statistical_outlier_filter()
@@ -392,7 +391,7 @@ class DopeNode(object):
 
         cloud_filtered_array = np.asarray(cloud_filtered)  
 
-        rospy.logwarn ("Num points after downsample and filter : {}".format(cloud_filtered_array.shape[0]))
+        rospy.logdebug ("Num points after downsample and filter : {}".format(cloud_filtered_array.shape[0]))
         
         if publish_filtered:
             cloud_color = np.zeros(cloud_filtered_array.shape[0])
@@ -400,7 +399,7 @@ class DopeNode(object):
                 cloud_filtered_array, cloud_color, rospy.Time.now(), self.world_frame
             )
             self.pub_filtered_cloud.publish(ros_msg)
-        rospy.logwarn("Done cloud processing")
+        rospy.logdebug("Done cloud processing")
         
         return cloud_filtered
 
@@ -426,7 +425,7 @@ class DopeNode(object):
         pairwise_distances = pairwise_distances_argmin_min(
                     scene_cloud, transformed_pose_cloud, metric='euclidean')
         mean_dist_add_s = np.mean(pairwise_distances[1])
-        print("Average pose distance - ADD-S (in m) : {}".format(mean_dist_add_s))
+        return mean_dist_add_s
 
 
     def image_callback(self, image_msg, camera_info, cloud_in=None):
@@ -491,26 +490,14 @@ class DopeNode(object):
                 self.pose_file.write(' '.join(map(str, pose_list)))
                 self.pose_file.write("\n")
                 if self.use_icp:
-                    rospy.logdebug("Doing ICP for result : {}, {}".format(i_r, result["name"]))
+                    rospy.logwarn("Doing ICP for result : {}, {}".format(i_r, result["name"]))
                     loc_scale = np.array([loc[0] / 100, loc[1] / 100, loc[2] / 100])
                     R = tf.transformations.quaternion_matrix(ori)
                     T = tf.transformations.translation_matrix(loc_scale)
-                    # cloud_filtered_array = self.transform_cloud(self.mesh_clouds[result["name"]], trans=loc_scale, quat=ori)
 
                     # Pose is in camera frame, so need to apply camera as well as pose transformations
                     total_transform = tf.transformations.concatenate_matrices(self.camera_pose_matrix, T, R)
                     cloud_filtered_array = self.transform_cloud(self.mesh_clouds[result["name"]], mat=total_transform)
-                    # try:
-                    #     trans, rot = self.tf_listener.lookupTransform(self.world_frame, image_msg.header.frame_id, rospy.Time(0))
-                    #     R_1 = tf.transformations.quaternion_matrix(rot)
-                    #     T_1 = tf.transformations.translation_matrix(trans)
-                    #     total_transform = tf.transformations.concatenate_matrices(T_1, R_1, T, R)
-                    #     cloud_filtered_array = self.transform_cloud(self.mesh_clouds[result["name"]], mat=total_transform)
-
-                    # except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
-                    #     rospy.logwarn("Couldn't transform cloud")
-                        
-                    # rospy.logwarn("Num points after downsample and filter : {}".format(cloud_filtered_array.shape[0]))
                     
                     cloud_pose = pcl.PointCloud()
                     cloud_pose.from_array(cloud_filtered_array)
@@ -528,7 +515,15 @@ class DopeNode(object):
                     pose_frame = self.world_frame
 
                     cloud_filtered_array = self.transform_cloud(self.mesh_clouds[result["name"]], mat=total_transform_icp)
-                    self.compare_clouds(np.asarray(cloud_scene), cloud_filtered_array)
+                    pose_error = self.compare_clouds(np.asarray(cloud_scene), cloud_filtered_array)
+                    rospy.logwarn("Average pose distance - ADD-S (in m) : {}, min pose error so far : {}".format(pose_error, self.min_pose_error[result["name"]]))
+
+                    if self.track_pose_accuracy:
+                        # Only publish if new pose is better than last one
+                        if pose_error < self.min_pose_error[result["name"]]:
+                            self.min_pose_error[result["name"]] = pose_error
+                        else:
+                            continue
 
                     cloud_color = np.zeros(cloud_filtered_array.shape[0])
                     ros_msg = self.xyzrgb_array_to_pointcloud2(
@@ -679,7 +674,7 @@ def main():
     """Main routine to run DOPE"""
 
     # Initialize ROS node
-    rospy.init_node('dope')
+    rospy.init_node('dope', log_level=rospy.DEBUG)
     DopeNode()
 
     try:
