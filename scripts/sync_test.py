@@ -45,15 +45,15 @@ def main():
         CameraInfo
     )
     cloud_sub = message_filters.Subscriber(
-        "/camera/depth_registered/points",
+        "/camera/depth/points",
         PointCloud2
     )
-    ts = message_filters.TimeSynchronizer([image_sub, info_sub, cloud_sub], 10)
+    ts = message_filters.TimeSynchronizer([image_sub, info_sub, cloud_sub], 1000)
     # ts = message_filters.ApproximateTimeSynchronizer([image_sub, info_sub, cloud_sub], 1, 10, 0.1)
 
     ts.registerCallback(image_info_cloud_callback)
 
-    ts = message_filters.TimeSynchronizer([image_sub, cloud_sub], 10)
+    ts = message_filters.TimeSynchronizer([image_sub, cloud_sub], 1000)
     # ts = message_filters.ApproximateTimeSynchronizer([image_sub, cloud_sub], 1, 10, 0.1)
 
     ts.registerCallback(image_cloud_callback)

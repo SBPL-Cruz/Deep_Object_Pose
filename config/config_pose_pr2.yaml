@@ -4,13 +4,17 @@ topic_depth_camera: "/camera/depth/image"
 topic_depth_camera_info : "/camera/depth/camera_info"
 # topic_camera: "/l_forearm_cam/image_color"
 # topic_camera_info: "/l_forearm_cam/camera_info"
-topic_camera_cloud: "/camera/depth_registered/points"
+topic_camera_cloud: "/camera/depth/points"
+# topic_camera_cloud: "/camera/depth_registered/points"
 topic_publishing: "dope"
 input_is_rectified: True   # Whether the input image is rectified (strongly suggested!)
 downscale_height: 500      # if the input image is larger than this, scale it down to this pixel height
 device: "gpu"
 world_frame: "/base_footprint"
+camera_frame: "/camera_depth_optical_frame"
 use_icp : True
+zmin : 0.67
+zmax : 0.87
 
 # Comment any of these lines to prevent detection / pose estimation of that object
 weights: {
