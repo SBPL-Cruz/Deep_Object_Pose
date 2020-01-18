@@ -390,7 +390,13 @@ class DopeNode(object):
         # cloud_filtered = fil.filter()
 
         cloud_filtered_array = np.asarray(cloud_filtered)  
-
+        mean = np.mean(cloud_filtered_array, axis=0)
+        pose_estimate = {}
+        mean = mean * 100
+        pose_estimate['location'] = mean.tolist()
+        # pose_estimate['quaternion'] = [0.02218474, -0.81609224, -0.57647473,  0.03432471]
+        pose_estimate['quaternion'] = [-1,0,0,1]
+        
         rospy.logdebug ("Num points after downsample and filter : {}".format(cloud_filtered_array.shape[0]))
         
         if publish_filtered:
@@ -401,7 +407,7 @@ class DopeNode(object):
             self.pub_filtered_cloud.publish(ros_msg)
         rospy.logdebug("Done cloud processing")
         
-        return cloud_filtered
+        return cloud_filtered, pose_estimate
 
     def transform_cloud(self, cloud_in, trans=None, quat=None, mat=None):
         '''
@@ -433,7 +439,7 @@ class DopeNode(object):
 
         start_time = time.time()
         if self.use_icp:
-            cloud_scene = self.process_cloud(cloud_in, publish_filtered=True)
+            cloud_scene, pose_estimate = self.process_cloud(cloud_in, publish_filtered=True)
         img = self.cv_bridge.imgmsg_to_cv2(image_msg, "rgb8")
         # cv2.imwrite('img.png', cv2.cvtColor(img, cv2.COLOR_BGR2RGB))  # for debugging
 
@@ -476,27 +482,43 @@ class DopeNode(object):
                 img,
                 self.config_detect
             )
+            
+            if (len(results)) == 0:
+                result = {}
+                result["score"] = 0.0
+                result["name"] = "sugar"
+                result["location"] = pose_estimate["location"]
+                result["quaternion"] = np.array(pose_estimate["quaternion"])
+                results.append(result)
+                pose_frame = self.world_frame
+                do_icp = True
+            else:
+                do_icp = True
+                pose_frame = image_msg.header.frame_id
 
             # Publish pose and overlay cube on image
             for i_r, result in enumerate(results):
                 if result["location"] is None:
                     continue
+
                 loc = result["location"]
                 ori = result["quaternion"]
                 CONVERT_SCALE_CM_TO_METERS = 100
-                pose_frame = image_msg.header.frame_id
                 
                 pose_list = loc + ori.tolist()
                 self.pose_file.write(' '.join(map(str, pose_list)))
                 self.pose_file.write("\n")
-                if self.use_icp:
+                if self.use_icp and do_icp:
                     rospy.logwarn("Doing ICP for result : {}, {}".format(i_r, result["name"]))
-                    loc_scale = np.array([loc[0] / 100, loc[1] / 100, loc[2] / 100])
+                    loc_scale = np.array([loc[0] / CONVERT_SCALE_CM_TO_METERS, loc[1] / CONVERT_SCALE_CM_TO_METERS, loc[2] / CONVERT_SCALE_CM_TO_METERS])
                     R = tf.transformations.quaternion_matrix(ori)
                     T = tf.transformations.translation_matrix(loc_scale)
 
                     # Pose is in camera frame, so need to apply camera as well as pose transformations
-                    total_transform = tf.transformations.concatenate_matrices(self.camera_pose_matrix, T, R)
+                    if pose_frame == self.world_frame:
+                        total_transform = tf.transformations.concatenate_matrices(T, R)
+                    else:
+                        total_transform = tf.transformations.concatenate_matrices(self.camera_pose_matrix, T, R)
                     cloud_filtered_array = self.transform_cloud(self.mesh_clouds[result["name"]], mat=total_transform)
                     
                     cloud_pose = pcl.PointCloud()
@@ -526,10 +548,9 @@ class DopeNode(object):
                             continue
 
                     cloud_color = np.zeros(cloud_filtered_array.shape[0])
-                    ros_msg = self.xyzrgb_array_to_pointcloud2(
+                    pose_cloud_msg = self.xyzrgb_array_to_pointcloud2(
                         cloud_filtered_array, cloud_color, rospy.Time.now(), self.world_frame
                     )
-                    self.pub_pose_cloud.publish(ros_msg)
 
                 # transform orientation
                 transformed_ori = tf.transformations.quaternion_multiply(ori, self.model_transforms[m])
@@ -552,38 +573,44 @@ class DopeNode(object):
                 pose_msg.pose.orientation.w = transformed_ori[3]
 
                 # Publish
-                self.pubs[m].publish(pose_msg)
-                self.pub_dimension[m].publish(str(dims))
+                if pose_msg.pose.position.y < 1.35 and pose_msg.pose.position.y > 0.7:
+                    self.pubs[m].publish(pose_msg)
+                    self.pub_dimension[m].publish(str(dims))
 
-                # Add to Detection3DArray
-                detection = Detection3D()
-                hypothesis = ObjectHypothesisWithPose()
-                hypothesis.id = self.class_ids[result["name"]]
-                hypothesis.score = result["score"]
-                hypothesis.pose.pose = pose_msg.pose
-                detection.results.append(hypothesis)
-                detection.bbox.center = pose_msg.pose
-                detection.bbox.size.x = dims[0] / CONVERT_SCALE_CM_TO_METERS
-                detection.bbox.size.y = dims[1] / CONVERT_SCALE_CM_TO_METERS
-                detection.bbox.size.z = dims[2] / CONVERT_SCALE_CM_TO_METERS
-                detection_array.detections.append(detection)
+                    # Add to Detection3DArray
+                    detection = Detection3D()
+                    hypothesis = ObjectHypothesisWithPose()
+                    hypothesis.id = self.class_ids[result["name"]]
+                    hypothesis.score = result["score"]
+                    hypothesis.pose.pose = pose_msg.pose
+                    detection.results.append(hypothesis)
+                    detection.bbox.center = pose_msg.pose
+                    detection.bbox.size.x = dims[0] / CONVERT_SCALE_CM_TO_METERS
+                    detection.bbox.size.y = dims[1] / CONVERT_SCALE_CM_TO_METERS
+                    detection.bbox.size.z = dims[2] / CONVERT_SCALE_CM_TO_METERS
+                    detection_array.detections.append(detection)
 
-                # Draw the cube
-                if None not in result['projected_points']:
-                    points2d = []
-                    for pair in result['projected_points']:
-                        points2d.append(tuple(pair))
-                    draw.draw_cube(points2d, self.draw_colors[m])
+                    # Draw the cube
+                    if 'projected_points' in result:
+                        if None not in result['projected_points']:
+                            points2d = []
+                            for pair in result['projected_points']:
+                                points2d.append(tuple(pair))
+                            draw.draw_cube(points2d, self.draw_colors[m])
 
         # Publish the image with results overlaid
-        self.pub_rgb_dope_points.publish(
-            CvBridge().cv2_to_imgmsg(
-                np.array(im)[..., ::-1],
-                "bgr8"
+        if pose_msg.pose.position.y < 1.35 and pose_msg.pose.position.y > 0.7:
+            self.pub_rgb_dope_points.publish(
+                CvBridge().cv2_to_imgmsg(
+                    np.array(im)[..., ::-1],
+                    "bgr8"
+                )
             )
-        )
-        self.pub_detections.publish(detection_array)
-        self.publish_markers(detection_array)
+            self.pub_detections.publish(detection_array)
+            self.publish_markers(detection_array)
+            if self.use_icp:
+                self.pub_pose_cloud.publish(pose_cloud_msg)
+
 
         print("--- Estimation took %s seconds ---" % (time.time() - start_time))
 

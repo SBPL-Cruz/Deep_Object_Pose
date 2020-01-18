@@ -15,12 +15,13 @@ topic_camera_cloud: "/camera/depth/points"
 world_frame: "/base_footprint"
 camera_frame: "/camera_depth_optical_frame"
 use_icp : True
-zmin : 0.67
+# zmin : 0.74
+zmin : 0.74
 zmax : 0.87
 xmin : 0.0
 xmax : 0.6
 downsampling_leaf_size : 0.02
-track_pose_accuracy : True
+track_pose_accuracy : False
 
 # Comment any of these lines to prevent detection / pose estimation of that object
 weights: {
