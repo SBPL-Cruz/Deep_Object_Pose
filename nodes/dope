@@ -115,6 +115,7 @@ class DopeNode(object):
         self.input_is_rectified = rospy.get_param('~input_is_rectified', True)
         self.downscale_height = rospy.get_param('~downscale_height', 500)
         self.use_icp = rospy.get_param('~use_icp', False)
+        self.use_cloud = rospy.get_param('~use_cloud', False)
 
         self.config_detect = lambda: None
         self.config_detect.mask_edges = 1
@@ -136,6 +137,11 @@ class DopeNode(object):
         self.downsampling_leaf_size = rospy.get_param('~downsampling_leaf_size', 0.02)
         self.track_pose_accuracy = rospy.get_param('~track_pose_accuracy', False)
         self.min_pose_error = {}
+
+        self.filter_y = rospy.get_param('~filter_y', False)
+        self.backup_icp = rospy.get_param('~backup_icp', False)
+        self.use_dope = rospy.get_param('~use_dope', False)
+
         # For each object to detect, load network model, create PNP solver, and start ROS publishers
         for model, weights_url in rospy.get_param('~weights').iteritems():
             self.models[model] = \
@@ -143,7 +149,8 @@ class DopeNode(object):
                     model,
                     resource_retriever.get_filename(weights_url, use_protocol=False)
                 )
-            self.models[model].load_net_model()
+            if self.use_dope:
+                self.models[model].load_net_model()
             self.min_pose_error[model] = np.inf
 
             try:
@@ -258,30 +265,25 @@ class DopeNode(object):
         )
         rospack = rospkg.RosPack()
         dope_path = rospack.get_path('dope')
-        self.pose_file = open(dope_path + "/pose_predictions.txt", "w")
+        # self.pose_file = open(dope_path + "/dope_icp_predictions_1.txt", "w")
+        self.pose_file = open(rospy.get_param("~pose_file", "pose_file.txt"), "w")
+        # self.pose_file = open(dope_path + "/dope_predictions_2.txt", "w")
         # if self.use_icp:
         #     cloud_sub.registerCallback(self.cloud_callback)
 
         # ts = message_filters.TimeSynchronizer([image_sub, depth_image_sub], 10)
         # ts.registerCallback(self.image_depth_callback)
 
-        if self.use_icp:
+        if self.use_icp or self.use_cloud:
             self.camera_info = None
             self.camera_pose_matrix = None
-            try:
-                rospy.logdebug("Getting transform between : {} and {}".format(self.world_frame, self.camera_frame))
-                trans, quat = self.tf_listener.lookupTransform(self.world_frame, self.camera_frame, rospy.Time(0))
-                # Camera pose in world frame
-                R = tf.transformations.quaternion_matrix(quat)
-                T = tf.transformations.translation_matrix(trans)
-                self.camera_pose_matrix = tf.transformations.concatenate_matrices(T, R)
-                rospy.logwarn("Got camera pose : {}".format(self.camera_pose_matrix))
-                self.rgb_image_cache = message_filters.Cache(image_sub, 100, allow_headerless=False)
-                cloud_sub.registerCallback(self.cloud_callback)
-                info_sub.registerCallback(self.camera_info_callback)
-            except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
-                rospy.logerr("Couldnt transform cloud")
+
+            self.get_camera_pose()
+
             # ts = message_filters.ApproximateTimeSynchronizer([image_sub, info_sub, cloud_sub], 1, 10, 0.1)
+            self.rgb_image_cache = message_filters.Cache(image_sub, 100, allow_headerless=False)
+            cloud_sub.registerCallback(self.cloud_callback)
+            info_sub.registerCallback(self.camera_info_callback)
         else:
             
             ts = message_filters.ApproximateTimeSynchronizer([image_sub, info_sub], 10, 0.1, allow_headerless=True)
@@ -293,6 +295,18 @@ class DopeNode(object):
 
     # def image_depth_callback(self, rgb, depth):
     #     print("test")
+
+    def get_camera_pose(self):
+        try:
+            rospy.logdebug("Getting transform between : {} and {}".format(self.world_frame, self.camera_frame))
+            trans, quat = self.tf_listener.lookupTransform(self.world_frame, self.camera_frame, rospy.Time(0))
+            # Camera pose in world frame
+            R = tf.transformations.quaternion_matrix(quat)
+            T = tf.transformations.translation_matrix(trans)
+            self.camera_pose_matrix = tf.transformations.concatenate_matrices(T, R)
+            rospy.logwarn("Got camera pose : {}".format(self.camera_pose_matrix))
+        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+            rospy.logerr("Couldnt get camera pose")
 
     def camera_info_callback(self, camera_info):
         self.camera_info = camera_info
@@ -343,7 +357,11 @@ class DopeNode(object):
     def cloud_callback(self, cloud_msg):
         rospy.logdebug("Cloud received, frame : {}".format(cloud_msg.header.frame_id))
         latest_image_msg = self.rgb_image_cache.getElemBeforeTime(cloud_msg.header.stamp)
-        if latest_image_msg is not None and self.camera_info is not None:
+        if self.camera_pose_matrix is None:
+            self.get_camera_pose()
+        if self.camera_pose_matrix is not None and latest_image_msg is not None and self.camera_info is not None:
+            # print(cloud_msg.header.stamp.to_sec())
+            # print(latest_image_msg.header.stamp.to_sec())
             self.image_callback(latest_image_msg, self.camera_info, cloud_msg)
 
     def process_cloud(self, cloud_msg, publish_filtered=False):
@@ -379,6 +397,10 @@ class DopeNode(object):
         passthrough.set_filter_limits(self.xmin, self.xmax)
         cloud_filtered = passthrough.filter()
 
+        fil = cloud_filtered.make_statistical_outlier_filter()
+        fil.set_mean_k(100)
+        fil.set_std_dev_mul_thresh(0.1)
+        cloud_filtered = fil.filter()
 
         sor = cloud_filtered.make_voxel_grid_filter()
         sor.set_leaf_size(self.downsampling_leaf_size, self.downsampling_leaf_size, self.downsampling_leaf_size)
@@ -438,12 +460,16 @@ class DopeNode(object):
         """Image callback"""
 
         start_time = time.time()
-        if self.use_icp:
+        if self.use_icp or self.use_cloud:
             cloud_scene, pose_estimate = self.process_cloud(cloud_in, publish_filtered=True)
+            cloud_array = np.asarray(cloud_scene)
+            if (cloud_array.shape[0] < 10):
+                return
         img = self.cv_bridge.imgmsg_to_cv2(image_msg, "rgb8")
         # cv2.imwrite('img.png', cv2.cvtColor(img, cv2.COLOR_BGR2RGB))  # for debugging
 
         # Update camera matrix and distortion coefficients
+        
         if self.input_is_rectified:
             P = np.matrix(camera_info.P, dtype='float64')
             P.resize((3, 4))
@@ -474,19 +500,26 @@ class DopeNode(object):
         detection_array = Detection3DArray()
         detection_array.header = image_msg.header
 
+        # TODO : Move to config
+        # filter_y = True
+        # backup_icp = False
+        # use_dope = True
+
         for m in self.models:
             # Detect object
-            results = ObjectDetector.detect_object_in_image(
-                self.models[m].net,
-                self.pnp_solvers[m],
-                img,
-                self.config_detect
-            )
+            results = []
+            if self.use_dope:
+                results = ObjectDetector.detect_object_in_image(
+                    self.models[m].net,
+                    self.pnp_solvers[m],
+                    img,
+                    self.config_detect
+                )
             
-            if (len(results)) == 0:
+            if (len(results)) == 0 and self.backup_icp == True:
                 result = {}
                 result["score"] = 0.0
-                result["name"] = "sugar"
+                result["name"] = "mustard"
                 result["location"] = pose_estimate["location"]
                 result["quaternion"] = np.array(pose_estimate["quaternion"])
                 results.append(result)
@@ -505,52 +538,58 @@ class DopeNode(object):
                 ori = result["quaternion"]
                 CONVERT_SCALE_CM_TO_METERS = 100
                 
-                pose_list = loc + ori.tolist()
-                self.pose_file.write(' '.join(map(str, pose_list)))
-                self.pose_file.write("\n")
+                loc_scale = np.array([loc[0] / CONVERT_SCALE_CM_TO_METERS, loc[1] / CONVERT_SCALE_CM_TO_METERS, loc[2] / CONVERT_SCALE_CM_TO_METERS])
+                R = tf.transformations.quaternion_matrix(ori)
+                T = tf.transformations.translation_matrix(loc_scale)
+
+                # Pose is in camera frame, so need to apply camera as well as pose transformations
+                if pose_frame == self.world_frame:
+                    total_transform = tf.transformations.concatenate_matrices(T, R)
+                else:
+                    total_transform = tf.transformations.concatenate_matrices(self.camera_pose_matrix, T, R)
+                
                 if self.use_icp and do_icp:
                     rospy.logwarn("Doing ICP for result : {}, {}".format(i_r, result["name"]))
-                    loc_scale = np.array([loc[0] / CONVERT_SCALE_CM_TO_METERS, loc[1] / CONVERT_SCALE_CM_TO_METERS, loc[2] / CONVERT_SCALE_CM_TO_METERS])
-                    R = tf.transformations.quaternion_matrix(ori)
-                    T = tf.transformations.translation_matrix(loc_scale)
 
-                    # Pose is in camera frame, so need to apply camera as well as pose transformations
-                    if pose_frame == self.world_frame:
-                        total_transform = tf.transformations.concatenate_matrices(T, R)
-                    else:
-                        total_transform = tf.transformations.concatenate_matrices(self.camera_pose_matrix, T, R)
+                    # Transform model cloud with prediction that can be used for ICP
                     cloud_filtered_array = self.transform_cloud(self.mesh_clouds[result["name"]], mat=total_transform)
                     
                     cloud_pose = pcl.PointCloud()
                     cloud_pose.from_array(cloud_filtered_array)
 
+                    # Do ICP and get new transform
                     icp = cloud_pose.make_IterativeClosestPoint()
                     converged, transf, estimate, fitness = icp.icp(cloud_pose, cloud_scene)
                     rospy.logdebug('has converged:' + str(converged) + ' score: ' + str(fitness))
                     rospy.logdebug(str(transf))
                     total_transform_icp = tf.transformations.concatenate_matrices(transf, total_transform)
                     rospy.logdebug(str(total_transform_icp))
+                else:
+                    total_transform_icp = total_transform
 
-                    loc = tf.transformations.translation_from_matrix(total_transform_icp)
-                    CONVERT_SCALE_CM_TO_METERS = 1
-                    ori = tf.transformations.quaternion_from_matrix(total_transform_icp)
-                    pose_frame = self.world_frame
+                # Use the final pose to get loc and ori lists which can be used later
+                loc = tf.transformations.translation_from_matrix(total_transform_icp)
+                CONVERT_SCALE_CM_TO_METERS = 1
+                ori = tf.transformations.quaternion_from_matrix(total_transform_icp)
+                pose_frame = self.world_frame
 
-                    cloud_filtered_array = self.transform_cloud(self.mesh_clouds[result["name"]], mat=total_transform_icp)
-                    pose_error = self.compare_clouds(np.asarray(cloud_scene), cloud_filtered_array)
-                    rospy.logwarn("Average pose distance - ADD-S (in m) : {}, min pose error so far : {}".format(pose_error, self.min_pose_error[result["name"]]))
+                # Use the final pose to create model point cloud and get accuracy
+                cloud_filtered_array = self.transform_cloud(self.mesh_clouds[result["name"]], mat=total_transform_icp)
+                pose_error = self.compare_clouds(np.asarray(cloud_scene), cloud_filtered_array)
+                rospy.logwarn("Average pose distance - ADD-S (in m) : {}, min pose error so far : {}".format(pose_error, self.min_pose_error[result["name"]]))
+                
+                pose_list = loc.tolist() + ori.tolist()
+                pose_list += [pose_error]
+                self.pose_file.write(' '.join(map(str, pose_list)))
+                self.pose_file.write("\n")
 
-                    if self.track_pose_accuracy:
-                        # Only publish if new pose is better than last one
-                        if pose_error < self.min_pose_error[result["name"]]:
-                            self.min_pose_error[result["name"]] = pose_error
-                        else:
-                            continue
+                # Only publish if new pose is better than last one and if tracking pose accuracy is switched on
+                
 
-                    cloud_color = np.zeros(cloud_filtered_array.shape[0])
-                    pose_cloud_msg = self.xyzrgb_array_to_pointcloud2(
-                        cloud_filtered_array, cloud_color, rospy.Time.now(), self.world_frame
-                    )
+                cloud_color = np.zeros(cloud_filtered_array.shape[0])
+                pose_cloud_msg = self.xyzrgb_array_to_pointcloud2(
+                    cloud_filtered_array, cloud_color, rospy.Time.now(), self.world_frame
+                )
 
                 # transform orientation
                 transformed_ori = tf.transformations.quaternion_multiply(ori, self.model_transforms[m])
@@ -573,9 +612,16 @@ class DopeNode(object):
                 pose_msg.pose.orientation.w = transformed_ori[3]
 
                 # Publish
-                if pose_msg.pose.position.y < 1.35 and pose_msg.pose.position.y > 0.7:
+                if (pose_msg.pose.position.y < 1.43 and pose_msg.pose.position.y > 0.9 and self.filter_y == True) or self.filter_y == False:
+                    if self.track_pose_accuracy:
+                        if pose_error < self.min_pose_error[result["name"]]:
+                            self.min_pose_error[result["name"]] = pose_error
+                        else:
+                            continue
                     self.pubs[m].publish(pose_msg)
                     self.pub_dimension[m].publish(str(dims))
+                    if self.use_icp or self.use_cloud:
+                        self.pub_pose_cloud.publish(pose_cloud_msg)
 
                     # Add to Detection3DArray
                     detection = Detection3D()
@@ -599,17 +645,16 @@ class DopeNode(object):
                             draw.draw_cube(points2d, self.draw_colors[m])
 
         # Publish the image with results overlaid
-        if pose_msg.pose.position.y < 1.35 and pose_msg.pose.position.y > 0.7:
-            self.pub_rgb_dope_points.publish(
-                CvBridge().cv2_to_imgmsg(
-                    np.array(im)[..., ::-1],
-                    "bgr8"
-                )
+        # if (pose_msg.pose.position.y < 1.38 and pose_msg.pose.position.y > 0.9 and self.filter_y == True) or self.filter_y == False:
+        self.pub_rgb_dope_points.publish(
+            CvBridge().cv2_to_imgmsg(
+                np.array(im)[..., ::-1],
+                "bgr8"
             )
-            self.pub_detections.publish(detection_array)
-            self.publish_markers(detection_array)
-            if self.use_icp:
-                self.pub_pose_cloud.publish(pose_cloud_msg)
+        )
+        # self.pub_detections.publish(detection_array)
+        # self.publish_markers(detection_array)
+            
 
 
         print("--- Estimation took %s seconds ---" % (time.time() - start_time))

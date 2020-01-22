@@ -14,24 +14,32 @@ topic_camera_cloud: "/camera/depth/points"
 # topic_camera_cloud: "/camera/depth_registered/points"
 world_frame: "/base_footprint"
 camera_frame: "/camera_depth_optical_frame"
-use_icp : True
 # zmin : 0.74
-zmin : 0.74
-zmax : 0.87
+zmin : 0.745
+# zmin : 0.67
+zmax : 1.0
 xmin : 0.0
 xmax : 0.6
 downsampling_leaf_size : 0.02
 track_pose_accuracy : False
+
+filter_y : True
+backup_icp : True
+use_dope : False
+use_icp : True
+use_cloud : True
+pose_file : "/media/aditya/A69AFABA9AFA85D9/Cruzr/code/DOPE/catkin_ws/src/Deep_Object_Pose/pr2/sugar_pose_1_run_random.txt"
 
 # Comment any of these lines to prevent detection / pose estimation of that object
 weights: {
     # "cracker":"package://dope/weights/cracker_60.pth",
     # "gelatin":"package://dope/weights/gelatin_60.pth",
     # "meat":"package://dope/weights/meat_20.pth",
-    # "mustard":"package://dope/weights/mustard_60.pth",
+    "mustard":"package://dope/weights/mustard_60.pth",
     # "soup":"package://dope/weights/soup_60.pth",
-    "sugar":"package://dope/weights/sugar_60.pth",
+    # "sugar":"package://dope/weights/sugar_60.pth",
     # "bleach":"package://dope/weights/bleach_28_dr.pth"
+    # "drill":"package://dope/weights/soup_60.pth",
 }
 
 # Cuboid dimension in cm x,y,z
@@ -39,10 +47,11 @@ dimensions: {
     "cracker": [16.403600692749023,21.343700408935547,7.179999828338623],
     "gelatin": [8.918299674987793, 7.311500072479248, 2.9983000755310059],
     "meat": [10.164673805236816,8.3542995452880859,5.7600898742675781],
-    "mustard": [9.6024150848388672,19.130100250244141,5.824894905090332],
+    "drill": [16.403600692749023,21.343700408935547,7.179999828338623],
     "soup": [6.7659378051757813,10.185500144958496,6.771425724029541],
     "sugar": [9.267730712890625,17.625339508056641,4.5134143829345703],
     "bleach": [10.267730712890625,26.625339508056641,7.5134143829345703],
+    "mustard": [9.6024150848388672,19.130100250244141,5.824894905090332],
 }
 
 class_ids: {
@@ -53,6 +62,7 @@ class_ids: {
     "soup":    5,
     "sugar":   6,
     "bleach":  7,
+    "drill":  8,
 }
 
 draw_colors: {
@@ -63,6 +73,7 @@ draw_colors: {
     "soup": [255, 101, 0],  # orange
     "sugar": [232, 222, 12],  # yellow
     "bleach": [232, 222, 12],  # yellow
+    "drill": [232, 222, 12],  # yellow
 }
 
 # optional: provide a transform that is applied to the pose returned by DOPE
@@ -80,20 +91,22 @@ meshes: {
 #    "cracker": "file://path/to/Dataset_Utilities/nvdu/data/ycb/aligned_cm/003_cracker_box/google_16k/textured.obj",
 #    "gelatin": "file://path/to/Dataset_Utilities/nvdu/data/ycb/aligned_cm/009_gelatin_box/google_16k/textured.obj",
 #    "meat":    "file://path/to/Dataset_Utilities/nvdu/data/ycb/aligned_cm/010_potted_meat_can/google_16k/textured.obj",
-#    "mustard": "file://path/to/Dataset_Utilities/nvdu/data/ycb/aligned_cm/006_mustard_bottle/google_16k/textured.obj",
-#    "soup":    "file://path/to/Dataset_Utilities/nvdu/data/ycb/aligned_cm/005_tomato_soup_can/google_16k/textured.obj",
+   "mustard": "/media/aditya/A69AFABA9AFA85D9/Datasets/YCB_Video_Dataset/aligned_cm/006_mustard_bottle/google_16k/textured.obj",
+#    "soup":    "/media/aditya/A69AFABA9AFA85D9/Datasets/YCB_Video_Dataset/aligned_cm/005_tomato_soup_can/google_16k/textured.obj",
    "sugar":   "/media/aditya/A69AFABA9AFA85D9/Datasets/YCB_Video_Dataset/aligned_cm/004_sugar_box/google_16k/textured.obj",
 #    "bleach":  "file://path/to/Dataset_Utilities/nvdu/data/ycb/aligned_cm/021_bleach_cleanser/google_16k/textured.obj",
+#    "drill":    "/media/aditya/A69AFABA9AFA85D9/Datasets/YCB_Video_Dataset/aligned_cm/035_power_drill/google_16k/textured.obj",
 }
 
 meshes_ply: {
 #    "cracker": "file://path/to/Dataset_Utilities/nvdu/data/ycb/aligned_cm/003_cracker_box/google_16k/textured.obj",
 #    "gelatin": "file://path/to/Dataset_Utilities/nvdu/data/ycb/aligned_cm/009_gelatin_box/google_16k/textured.obj",
 #    "meat":    "file://path/to/Dataset_Utilities/nvdu/data/ycb/aligned_cm/010_potted_meat_can/google_16k/textured.obj",
-#    "mustard": "file://path/to/Dataset_Utilities/nvdu/data/ycb/aligned_cm/006_mustard_bottle/google_16k/textured.obj",
-#    "soup":    "file://path/to/Dataset_Utilities/nvdu/data/ycb/aligned_cm/005_tomato_soup_can/google_16k/textured.obj",
+   "mustard": "/media/aditya/A69AFABA9AFA85D9/Datasets/YCB_Video_Dataset/aligned_cm/006_mustard_bottle/textured.ply",
+#    "soup":    "/media/aditya/A69AFABA9AFA85D9/Datasets/YCB_Video_Dataset/aligned_cm/005_tomato_soup_can/textured.ply",
    "sugar":   "/media/aditya/A69AFABA9AFA85D9/Datasets/YCB_Video_Dataset/aligned_cm/004_sugar_box/textured.ply",
 #    "bleach":  "file://path/to/Dataset_Utilities/nvdu/data/ycb/aligned_cm/021_bleach_cleanser/google_16k/textured.obj",
+#    "drill":  "/media/aditya/A69AFABA9AFA85D9/Datasets/YCB_Video_Dataset/aligned_cm/035_power_drill/textured.ply",
 }
 
 # optional: If the specified meshes are not in meters, provide a scale here (e.g. if the mesh is in centimeters, scale should be 0.01). default scale: 1.0.
@@ -105,6 +118,7 @@ mesh_scales: {
     "soup":    0.01,
     "sugar":   0.01,
     "bleach":  0.01,
+    "drill":  0.01,
 }
 
 # Config params for DOPE
