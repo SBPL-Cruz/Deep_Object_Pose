@@ -397,6 +397,11 @@ class DopeNode(object):
         passthrough.set_filter_limits(self.xmin, self.xmax)
         cloud_filtered = passthrough.filter()
 
+        passthrough = cloud_filtered.make_passthrough_filter()
+        passthrough.set_filter_field_name("y")
+        passthrough.set_filter_limits(0, 1.7)
+        cloud_filtered = passthrough.filter()
+
         fil = cloud_filtered.make_statistical_outlier_filter()
         fil.set_mean_k(100)
         fil.set_std_dev_mul_thresh(0.1)
@@ -413,6 +418,7 @@ class DopeNode(object):
 
         cloud_filtered_array = np.asarray(cloud_filtered)  
         mean = np.mean(cloud_filtered_array, axis=0)
+        mean[2] = self.zmin
         pose_estimate = {}
         mean = mean * 100
         pose_estimate['location'] = mean.tolist()
@@ -519,7 +525,7 @@ class DopeNode(object):
             if (len(results)) == 0 and self.backup_icp == True:
                 result = {}
                 result["score"] = 0.0
-                result["name"] = "mustard"
+                result["name"] = "sugar"
                 result["location"] = pose_estimate["location"]
                 result["quaternion"] = np.array(pose_estimate["quaternion"])
                 results.append(result)
@@ -551,7 +557,6 @@ class DopeNode(object):
                 if self.use_icp and do_icp:
                     rospy.logwarn("Doing ICP for result : {}, {}".format(i_r, result["name"]))
 
-                    # Transform model cloud with prediction that can be used for ICP
                     cloud_filtered_array = self.transform_cloud(self.mesh_clouds[result["name"]], mat=total_transform)
                     
                     cloud_pose = pcl.PointCloud()
@@ -563,6 +568,43 @@ class DopeNode(object):
                     rospy.logdebug('has converged:' + str(converged) + ' score: ' + str(fitness))
                     rospy.logdebug(str(transf))
                     total_transform_icp = tf.transformations.concatenate_matrices(transf, total_transform)
+                    # best_fitness_score = np.inf
+                    # for yaw in np.linspace(0, 3.14, 1):
+                    #     rospy.logwarn("Sampling yaw : {}".format(yaw))
+                    #     R_sample = tf.transformations.euler_matrix(0, yaw, 0)
+                    #     # print(R_sample)
+                    #     sample_transform = tf.transformations.concatenate_matrices(total_transform, R_sample)
+                    #     # Transform model cloud with prediction that can be used for ICP
+                    #     cloud_filtered_array = self.transform_cloud(self.mesh_clouds[result["name"]], mat=sample_transform)
+                        
+                    #     cloud_pose = pcl.PointCloud()
+                    #     cloud_pose.from_array(cloud_filtered_array)
+
+                    #     # Do ICP and get new transform
+                    #     icp = cloud_pose.make_IterativeClosestPoint()
+                    #     converged, transf, estimate, fitness = icp.icp(cloud_pose, cloud_scene)
+                    #     rospy.logdebug('has converged:' + str(converged) + ' score: ' + str(fitness))
+                    #     rospy.logdebug(str(transf))
+
+                    #     # _, yaw_icp, _ = tf.transformations.euler_from_matrix(transf)
+                    #     # trans_icp = tf.transformations.translation_matrix(tf.transformations.translation_from_matrix(transf))
+                    #     # # print(yaw_icp)
+                    #     # transf = tf.transformations.concatenate_matrices(trans_icp, tf.transformations.euler_matrix(0, 0, 0))
+
+                    #     icp_transform = tf.transformations.concatenate_matrices(transf, sample_transform)
+                    #     # icp_trans = tf.transformations.translation_from_matrix(icp_transform)
+                    #     cloud_filtered_array = self.transform_cloud(self.mesh_clouds[result["name"]], mat=icp_transform)
+                    #     # cloud_color = np.zeros(cloud_filtered_array.shape[0])
+                    #     # pose_cloud_msg = self.xyzrgb_array_to_pointcloud2(
+                    #     #     cloud_filtered_array, cloud_color, rospy.Time.now(), self.world_frame
+                    #     # )
+                    #     # self.pub_pose_cloud.publish(pose_cloud_msg)
+                    #     # rospy.sleep(5)
+                    #     fitness = self.compare_clouds(np.asarray(cloud_scene), cloud_filtered_array)
+                    #     if fitness < best_fitness_score:
+                    #         best_fitness_score = fitness
+                    #         total_transform_icp = icp_transform
+
                     rospy.logdebug(str(total_transform_icp))
                 else:
                     total_transform_icp = total_transform
@@ -612,7 +654,7 @@ class DopeNode(object):
                 pose_msg.pose.orientation.w = transformed_ori[3]
 
                 # Publish
-                if (pose_msg.pose.position.y < 1.43 and pose_msg.pose.position.y > 0.9 and self.filter_y == True) or self.filter_y == False:
+                if (pose_msg.pose.position.y < 1.5 and pose_msg.pose.position.y > 0.9 and self.filter_y == True) or self.filter_y == False:
                     if self.track_pose_accuracy:
                         if pose_error < self.min_pose_error[result["name"]]:
                             self.min_pose_error[result["name"]] = pose_error
@@ -627,7 +669,8 @@ class DopeNode(object):
                     detection = Detection3D()
                     hypothesis = ObjectHypothesisWithPose()
                     hypothesis.id = self.class_ids[result["name"]]
-                    hypothesis.score = result["score"]
+                    # hypothesis.score = result["score"]
+                    hypothesis.score = pose_error
                     hypothesis.pose.pose = pose_msg.pose
                     detection.results.append(hypothesis)
                     detection.bbox.center = pose_msg.pose
@@ -652,8 +695,8 @@ class DopeNode(object):
                 "bgr8"
             )
         )
-        # self.pub_detections.publish(detection_array)
-        # self.publish_markers(detection_array)
+        self.pub_detections.publish(detection_array)
+        self.publish_markers(detection_array)
             
 
 
@@ -676,25 +719,26 @@ class DopeNode(object):
             color = self.draw_colors[name]
 
             # cube marker
-            marker = Marker()
-            marker.header = detection_array.header
-            marker.action = Marker.ADD
-            marker.pose = det.bbox.center
-            marker.color.r = color[0] / 255.0
-            marker.color.g = color[1] / 255.0
-            marker.color.b = color[2] / 255.0
-            marker.color.a = 0.4
-            marker.ns = "bboxes"
-            marker.id = i
-            marker.type = Marker.CUBE
-            marker.scale = det.bbox.size
-            markers.markers.append(marker)
+            # marker = Marker()
+            # marker.header = detection_array.header
+            # marker.action = Marker.ADD
+            # marker.pose = det.bbox.center
+            # marker.color.r = color[0] / 255.0
+            # marker.color.g = color[1] / 255.0
+            # marker.color.b = color[2] / 255.0
+            # marker.color.a = 0.4
+            # marker.ns = "bboxes"
+            # marker.id = i
+            # marker.type = Marker.CUBE
+            # marker.scale = det.bbox.size
+            # markers.markers.append(marker)
 
             # text marker
             marker = Marker()
             marker.header = detection_array.header
             marker.action = Marker.ADD
             marker.pose = det.bbox.center
+            marker.pose.position.z += 0.20
             marker.color.r = color[0] / 255.0
             marker.color.g = color[1] / 255.0
             marker.color.b = color[2] / 255.0
@@ -705,30 +749,30 @@ class DopeNode(object):
             marker.scale.x = 0.05
             marker.scale.y = 0.05
             marker.scale.z = 0.05
-            marker.text = '{} ({:.2f})'.format(name, det.results[0].score)
+            marker.text = '{} (add:{:.4f}, y:{:.2f})'.format(name, det.results[0].score, marker.pose.position.y)
             markers.markers.append(marker)
 
             # mesh marker
-            try:
-                marker = Marker()
-                marker.header = detection_array.header
-                marker.action = Marker.ADD
-                marker.pose = det.bbox.center
-                marker.color.r = color[0] / 255.0
-                marker.color.g = color[1] / 255.0
-                marker.color.b = color[2] / 255.0
-                marker.color.a = 0.7
-                marker.ns = "meshes"
-                marker.id = i
-                marker.type = Marker.MESH_RESOURCE
-                marker.scale.x = self.mesh_scales[name]
-                marker.scale.y = self.mesh_scales[name]
-                marker.scale.z = self.mesh_scales[name]
-                marker.mesh_resource = self.meshes[name]
-                markers.markers.append(marker)
-            except KeyError:
-                # user didn't specify self.meshes[name], so don't publish marker
-                pass
+            # try:
+            #     marker = Marker()
+            #     marker.header = detection_array.header
+            #     marker.action = Marker.ADD
+            #     marker.pose = det.bbox.center
+            #     marker.color.r = color[0] / 255.0
+            #     marker.color.g = color[1] / 255.0
+            #     marker.color.b = color[2] / 255.0
+            #     marker.color.a = 0.7
+            #     marker.ns = "meshes"
+            #     marker.id = i
+            #     marker.type = Marker.MESH_RESOURCE
+            #     marker.scale.x = self.mesh_scales[name]
+            #     marker.scale.y = self.mesh_scales[name]
+            #     marker.scale.z = self.mesh_scales[name]
+            #     marker.mesh_resource = self.meshes[name]
+            #     markers.markers.append(marker)
+            # except KeyError:
+            #     # user didn't specify self.meshes[name], so don't publish marker
+            #     pass
 
         self.pub_markers.publish(markers)
 

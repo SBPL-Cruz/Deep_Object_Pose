@@ -14,13 +14,13 @@ topic_camera_cloud: "/camera/depth/points"
 # topic_camera_cloud: "/camera/depth_registered/points"
 world_frame: "/base_footprint"
 camera_frame: "/camera_depth_optical_frame"
-# zmin : 0.74
-zmin : 0.745
+zmin : 0.73
+# zmin : 1.0
 # zmin : 0.67
 zmax : 1.0
-xmin : 0.0
+xmin : 0.35
 xmax : 0.6
-downsampling_leaf_size : 0.02
+downsampling_leaf_size : 0.015
 track_pose_accuracy : False
 
 filter_y : True
@@ -35,9 +35,9 @@ weights: {
     # "cracker":"package://dope/weights/cracker_60.pth",
     # "gelatin":"package://dope/weights/gelatin_60.pth",
     # "meat":"package://dope/weights/meat_20.pth",
-    "mustard":"package://dope/weights/mustard_60.pth",
+    # "mustard":"package://dope/weights/mustard_60.pth",
     # "soup":"package://dope/weights/soup_60.pth",
-    # "sugar":"package://dope/weights/sugar_60.pth",
+    "sugar":"package://dope/weights/sugar_60.pth",
     # "bleach":"package://dope/weights/bleach_28_dr.pth"
     # "drill":"package://dope/weights/soup_60.pth",
 }
@@ -91,9 +91,9 @@ meshes: {
 #    "cracker": "file://path/to/Dataset_Utilities/nvdu/data/ycb/aligned_cm/003_cracker_box/google_16k/textured.obj",
 #    "gelatin": "file://path/to/Dataset_Utilities/nvdu/data/ycb/aligned_cm/009_gelatin_box/google_16k/textured.obj",
 #    "meat":    "file://path/to/Dataset_Utilities/nvdu/data/ycb/aligned_cm/010_potted_meat_can/google_16k/textured.obj",
-   "mustard": "/media/aditya/A69AFABA9AFA85D9/Datasets/YCB_Video_Dataset/aligned_cm/006_mustard_bottle/google_16k/textured.obj",
+#    "mustard": "/media/aditya/A69AFABA9AFA85D9/Datasets/YCB_Video_Dataset/aligned_cm/006_mustard_bottle/google_16k/textured.obj",
 #    "soup":    "/media/aditya/A69AFABA9AFA85D9/Datasets/YCB_Video_Dataset/aligned_cm/005_tomato_soup_can/google_16k/textured.obj",
-   "sugar":   "/media/aditya/A69AFABA9AFA85D9/Datasets/YCB_Video_Dataset/aligned_cm/004_sugar_box/google_16k/textured.obj",
+#    "sugar":   "/media/aditya/A69AFABA9AFA85D9/Datasets/YCB_Video_Dataset/aligned_cm/004_sugar_box/google_16k/textured.obj",
 #    "bleach":  "file://path/to/Dataset_Utilities/nvdu/data/ycb/aligned_cm/021_bleach_cleanser/google_16k/textured.obj",
 #    "drill":    "/media/aditya/A69AFABA9AFA85D9/Datasets/YCB_Video_Dataset/aligned_cm/035_power_drill/google_16k/textured.obj",
 }
