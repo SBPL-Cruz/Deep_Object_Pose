@@ -289,6 +289,9 @@ class DopeNode(object):
             ts = message_filters.ApproximateTimeSynchronizer([image_sub, info_sub], 10, 0.1, allow_headerless=True)
             ts.registerCallback(self.image_callback)
 
+        self.pose_taken = False
+        self.pose_close_file = open(dope_path + "/pose_close_percep.txt", "a+")
+
         print("Running DOPE...(Listening to camera topic: '{}', info topic : '{}', cloud topic : '{}')".format(
                     rospy.get_param('~topic_camera'), rospy.get_param('~topic_camera_info'), rospy.get_param('~topic_camera_cloud')))
         print("Ctrl-C to stop")
@@ -355,7 +358,8 @@ class DopeNode(object):
         return msg
 
     def cloud_callback(self, cloud_msg):
-        rospy.logdebug("Cloud received, frame : {}".format(cloud_msg.header.frame_id))
+        # rospy.logdebug("Cloud received, frame : {}".format(cloud_msg.header.frame_id))
+        rospy.logdebug("Cloud received delay : {}".format(rospy.Time.now().to_sec() - cloud_msg.header.stamp.to_sec()))
         latest_image_msg = self.rgb_image_cache.getElemBeforeTime(cloud_msg.header.stamp)
         if self.camera_pose_matrix is None:
             self.get_camera_pose()
@@ -371,52 +375,58 @@ class DopeNode(object):
             3. Downsample
             4. Publish and return filtered cloud
         '''
-        rospy.logdebug("Cloud received, frame : {}".format(cloud_msg.header.frame_id))
+        # rospy.logdebug("Cloud received, frame : {}".format(cloud_msg.header.frame_id))
 
         pc = ros_numpy.numpify(cloud_msg)
-        height = pc.shape[0]
-        width = pc.shape[1]
-        np_points = np.zeros((height * width, 3), dtype=np.float32)
-        np_points[:, 0] = np.resize(pc['x'], height * width)
-        np_points[:, 1] = np.resize(pc['y'], height * width)
-        np_points[:, 2] = np.resize(pc['z'], height * width)
+        # pc_l = [np.asarray(x) for x in pc]
+        # print(pc_l)
+        # pc = np.asarray(pc_l)
+        # height = pc.shape[0]
+        # width = pc.shape[1]
+        # np_points = np.zeros((height * width, 3), dtype=np.float32)
+        np_points = np.zeros((pc.shape[0], 3), dtype=np.float32)
+        np_points[:, 0] = np.resize(pc['x'], pc.shape[0])
+        np_points[:, 1] = np.resize(pc['y'], pc.shape[0])
+        np_points[:, 2] = np.resize(pc['z'], pc.shape[0])
 
         # np_points_appened = np.hstack((np_points, np.ones((np_points.shape[0], 1))))
         # np_points_transformed = np.matmul(total_transform, np.transpose(np_points_appened))
         # np_points_transformed = np.transpose(np_points_transformed)[:,:3]
-        np_points_transformed = self.transform_cloud(np_points, mat=self.camera_pose_matrix)
-        pcl_cloud = pcl.PointCloud(np_points_transformed)
+        # np_points_transformed = self.transform_cloud(np_points, mat=self.camera_pose_matrix)
+        # pcl_cloud = pcl.PointCloud(np_points_transformed)
 
-        passthrough = pcl_cloud.make_passthrough_filter()
-        passthrough.set_filter_field_name("z")
-        passthrough.set_filter_limits(self.zmin, self.zmax)
-        cloud_filtered = passthrough.filter()
+        # passthrough = pcl_cloud.make_passthrough_filter()
+        # passthrough.set_filter_field_name("z")
+        # passthrough.set_filter_limits(self.zmin, self.zmax)
+        # cloud_filtered = passthrough.filter()
 
-        passthrough = cloud_filtered.make_passthrough_filter()
-        passthrough.set_filter_field_name("x")
-        passthrough.set_filter_limits(self.xmin, self.xmax)
-        cloud_filtered = passthrough.filter()
+        # passthrough = cloud_filtered.make_passthrough_filter()
+        # passthrough.set_filter_field_name("x")
+        # passthrough.set_filter_limits(self.xmin, self.xmax)
+        # cloud_filtered = passthrough.filter()
 
-        passthrough = cloud_filtered.make_passthrough_filter()
-        passthrough.set_filter_field_name("y")
-        passthrough.set_filter_limits(0, 1.7)
-        cloud_filtered = passthrough.filter()
+        # passthrough = cloud_filtered.make_passthrough_filter()
+        # passthrough.set_filter_field_name("y")
+        # passthrough.set_filter_limits(0, 1.7)
+        # cloud_filtered = passthrough.filter()
 
-        fil = cloud_filtered.make_statistical_outlier_filter()
-        fil.set_mean_k(100)
-        fil.set_std_dev_mul_thresh(0.1)
-        cloud_filtered = fil.filter()
+        # fil = cloud_filtered.make_statistical_outlier_filter()
+        # fil.set_mean_k(100)
+        # fil.set_std_dev_mul_thresh(0.1)
+        # cloud_filtered = fil.filter()
 
-        sor = cloud_filtered.make_voxel_grid_filter()
-        sor.set_leaf_size(self.downsampling_leaf_size, self.downsampling_leaf_size, self.downsampling_leaf_size)
-        cloud_filtered = sor.filter()
+        # sor = cloud_filtered.make_voxel_grid_filter()
+        # sor.set_leaf_size(self.downsampling_leaf_size, self.downsampling_leaf_size, self.downsampling_leaf_size)
+        # cloud_filtered = sor.filter()
 
         # fil = cloud_filtered.make_statistical_outlier_filter()
         # fil.set_mean_k(100)
         # fil.set_std_dev_mul_thresh(0.08)
         # cloud_filtered = fil.filter()
 
-        cloud_filtered_array = np.asarray(cloud_filtered)  
+        # cloud_filtered_array = np.asarray(cloud_filtered)  
+        cloud_filtered_array = np_points  
+        cloud_filtered = pcl.PointCloud(np_points)
         mean = np.mean(cloud_filtered_array, axis=0)
         mean[2] = self.zmin
         pose_estimate = {}
@@ -467,7 +477,7 @@ class DopeNode(object):
 
         start_time = time.time()
         if self.use_icp or self.use_cloud:
-            cloud_scene, pose_estimate = self.process_cloud(cloud_in, publish_filtered=True)
+            cloud_scene, pose_estimate = self.process_cloud(cloud_in, publish_filtered=False)
             cloud_array = np.asarray(cloud_scene)
             if (cloud_array.shape[0] < 10):
                 return
@@ -555,7 +565,7 @@ class DopeNode(object):
                     total_transform = tf.transformations.concatenate_matrices(self.camera_pose_matrix, T, R)
                 
                 if self.use_icp and do_icp:
-                    rospy.logwarn("Doing ICP for result : {}, {}".format(i_r, result["name"]))
+                    # rospy.logwarn("Doing ICP for result : {}, {}".format(i_r, result["name"]))
 
                     cloud_filtered_array = self.transform_cloud(self.mesh_clouds[result["name"]], mat=total_transform)
                     
@@ -565,8 +575,8 @@ class DopeNode(object):
                     # Do ICP and get new transform
                     icp = cloud_pose.make_IterativeClosestPoint()
                     converged, transf, estimate, fitness = icp.icp(cloud_pose, cloud_scene)
-                    rospy.logdebug('has converged:' + str(converged) + ' score: ' + str(fitness))
-                    rospy.logdebug(str(transf))
+                    # rospy.logdebug('has converged:' + str(converged) + ' score: ' + str(fitness))
+                    # rospy.logdebug(str(transf))
                     total_transform_icp = tf.transformations.concatenate_matrices(transf, total_transform)
                     # best_fitness_score = np.inf
                     # for yaw in np.linspace(0, 3.14, 1):
@@ -605,7 +615,7 @@ class DopeNode(object):
                     #         best_fitness_score = fitness
                     #         total_transform_icp = icp_transform
 
-                    rospy.logdebug(str(total_transform_icp))
+                    # rospy.logdebug(str(total_transform_icp))
                 else:
                     total_transform_icp = total_transform
 
@@ -618,7 +628,7 @@ class DopeNode(object):
                 # Use the final pose to create model point cloud and get accuracy
                 cloud_filtered_array = self.transform_cloud(self.mesh_clouds[result["name"]], mat=total_transform_icp)
                 pose_error = self.compare_clouds(np.asarray(cloud_scene), cloud_filtered_array)
-                rospy.logwarn("Average pose distance - ADD-S (in m) : {}, min pose error so far : {}".format(pose_error, self.min_pose_error[result["name"]]))
+                # rospy.logwarn("Average pose distance - ADD-S (in m) : {}, min pose error so far : {}".format(pose_error, self.min_pose_error[result["name"]]))
                 
                 pose_list = loc.tolist() + ori.tolist()
                 pose_list += [pose_error]
@@ -643,8 +653,9 @@ class DopeNode(object):
                 dims = tuple(dims)
 
                 pose_msg = PoseStamped()
-                pose_msg.header = image_msg.header
+                pose_msg.header = cloud_in.header
                 pose_msg.header.frame_id = pose_frame
+                # pose_msg.header.stamp = rospy.Time.now()
                 pose_msg.pose.position.x = loc[0] / CONVERT_SCALE_CM_TO_METERS
                 pose_msg.pose.position.y = loc[1] / CONVERT_SCALE_CM_TO_METERS
                 pose_msg.pose.position.z = loc[2] / CONVERT_SCALE_CM_TO_METERS
@@ -653,8 +664,42 @@ class DopeNode(object):
                 pose_msg.pose.orientation.z = transformed_ori[2]
                 pose_msg.pose.orientation.w = transformed_ori[3]
 
+
                 # Publish
-                if (pose_msg.pose.position.y < 1.5 and pose_msg.pose.position.y > 0.9 and self.filter_y == True) or self.filter_y == False:
+                if (pose_msg.pose.position.y < 1.49 and pose_msg.pose.position.y > 1.38 and self.filter_y == True) or self.filter_y == False:
+                    self.pose_taken = False
+                
+                if (pose_msg.pose.position.y <= 1.05 and pose_msg.pose.position.y >= 0.95 and self.filter_y == True) or self.filter_y == False:
+                    rospy.logdebug(str(total_transform_icp))
+                    
+                    if self.pose_taken == False:
+                        time_offset = (rospy.Time.now().to_sec() - cloud_in.header.stamp.to_sec()) + (time.time() - start_time) + 0.7
+                        offset_distance = time_offset * 0.2
+                        pose_actual = pose_msg.pose
+                        pose_actual.position.y -= offset_distance
+                        rospy.logwarn("Received pose : {}, Time offset : {}, Actual pose : {}".format(pose_msg.pose.position, time_offset, pose_actual.position))
+                        # pose_actual_euler = tf.transformations.euler_from_quaternion(transformed_ori, 'rzyx')
+                        # rospy.logwarn("Actual pose yaw : {}".format(pose_actual_euler))
+                        self.pose_taken = True
+                        # yaw = pose_actual_euler[2]
+                        # yaw += 2 * np.pi 
+                        # self.pose_close_file.write('x : {}, y : {}, yaw : {} '.format(pose_actual.position.x, pose_actual.position.y, yaw))
+                        self.pose_close_file.write("{} {} {} {} {} {}".format(
+                            pose_actual.position.x, pose_actual.position.y,
+                            pose_actual.orientation.x, pose_actual.orientation.y, pose_actual.orientation.z, pose_actual.orientation.w
+                        ))
+                        self.pose_close_file.write("\n")
+
+                    # if pose_msg.pose.position.y < 1.49 and pose_msg.pose.position.y > 1.47:
+                    #     self.first_pose_y = pose_msg.pose.position.y
+                    #     self.first_pose_timestamp = pose_msg.header.stamp.to_sec()
+                    # else:
+                    #     distance_from_pose = self.first_pose_y - pose_msg.pose.position.y
+                    #     distance_from_time = (pose_msg.header.stamp.to_sec() - self.first_pose_timestamp)  * 0.2
+                    #     distance_difference = distance_from_time - distance_from_pose
+                    #     rospy.logdebug("First pose Y : {}".format(self.first_pose_y))
+                    #     rospy.logdebug("Distance from time : {}, distance from pose : {}, difference : {}".format(distance_from_time, distance_from_pose, distance_difference))
+
                     if self.track_pose_accuracy:
                         if pose_error < self.min_pose_error[result["name"]]:
                             self.min_pose_error[result["name"]] = pose_error

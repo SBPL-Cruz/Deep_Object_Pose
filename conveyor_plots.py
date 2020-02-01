@@ -16,14 +16,21 @@ if __name__ == '__main__':
     args = parse_arguments()
     # pose_df = pd.read_csv(args.pose_file, delimiter=' ', names=['x', 'y', 'z', 'q_x', 'q_y', 'q_z', 'q_w', 'add'])
     # pose_path = "{}/{}".format("/media/aditya/A69AFABA9AFA85D9/Cruzr/code/DOPE/catkin_ws/src/Deep_Object_Pose/pr2/multi_object", "sugar")
-    # pose_path = "{}/{}".format("/media/aditya/A69AFABA9AFA85D9/Cruzr/code/DOPE/catkin_ws/src/Deep_Object_Pose/pr2/multi_object", "mustard")
+    pose_path = "{}/{}".format("/media/aditya/A69AFABA9AFA85D9/Cruzr/code/DOPE/catkin_ws/src/Deep_Object_Pose/pr2/multi_object", "mustard")
     # pose_path = "{}/{}".format("/media/aditya/A69AFABA9AFA85D9/Cruzr/code/DOPE/catkin_ws/src/Deep_Object_Pose/pr2/multi_object", "soup")
-    pose_path = "{}/{}".format("/media/aditya/A69AFABA9AFA85D9/Cruzr/code/DOPE/catkin_ws/src/Deep_Object_Pose/pr2/multi_object", "drill")
+    # pose_path = "{}/{}".format("/media/aditya/A69AFABA9AFA85D9/Cruzr/code/DOPE/catkin_ws/src/Deep_Object_Pose/pr2/multi_object", "drill")
     # pose_icp_df = pd.read_csv("{}/pred_icp_1.txt".format(pose_path), delimiter=' ', names=['x', 'y', 'z', 'q_x', 'q_y', 'q_z', 'q_w', 'add'])
     
-    pose_dope_df = pd.read_csv("{}/pred_icp_3.txt".format(pose_path), delimiter=' ', names=['x', 'y', 'z', 'q_x', 'q_y', 'q_z', 'q_w', 'add'])
-    pose_dope_df['add'] = pose_dope_df['add'].expanding(min_periods=4).mean();
+    pose_dope_df = pd.read_csv("{}/pred_icp_1.txt".format(pose_path), delimiter=' ', names=['x', 'y', 'z', 'q_x', 'q_y', 'q_z', 'q_w', 'add'])
+    pose_dope_df = pose_dope_df[20:]
+    pose_dope_df = pose_dope_df[:-3]
+    pose_dope_df['add'] = pose_dope_df['add'].expanding(min_periods=4).mean()
     pose_dope_df = pose_dope_df.iloc[::4, :]
+    pose_dope_df *= 100
+    # pose_dope_df_o = pd.read_csv("{}/pred_icp_1.txt".format(pose_path), delimiter=' ', names=['x', 'y', 'z', 'q_x', 'q_y', 'q_z', 'q_w', 'add'])
+    # # pose_dope_df_o = pose_dope_df_o[20:]
+    # pose_dope_df_o['add'] = pose_dope_df_o['add'].expanding(min_periods=4).mean()
+    # pose_dope_df_o = pose_dope_df_o.iloc[::4, :]
 
     # pose_dope_df['x'] = pose_dope_df['x'] - pose_dope_df['x'].expanding(min_periods=4).mean()
     # pose_dope_df['add'] = pose_dope_df['add'].expanding(min_periods=4).std()
@@ -38,27 +45,42 @@ if __name__ == '__main__':
 
 
     plt.figure()
-    plt.title("ADD")
-    plt.ylabel("ADD")
-    plt.xlabel("Decreasing Y")
+    plt.rcParams.update({'font.size': 14})
+    # plt.title("Variation in Pose Estimation Error")
+    plt.ylabel("Error (in cm)", fontsize=14)
+    plt.xlabel("Increasing distance from conveyor origin", fontsize=14)
     # plt.plot(pose_icp_df.index, pose_icp_df['add'], label="DOPE + ICP")
     # plt.plot(pose_dope_df.index, pose_dope_df['add'], label="DOPE")
-    plt.plot(pose_dope_df.index, pose_dope_df['add'], 'bo-', label="ICP")
+    plt.plot(pose_dope_df.index, pose_dope_df['add'], 'bo-')
+    # plt.plot(pose_dope_df_o.index, pose_dope_df_o['add'], 'bo-', label="Mustard")
     
     count = 0
-    for x, add, y in zip(pose_dope_df.index, pose_dope_df['add'], pose_dope_df['y']):
-        if count % 1 == 0:
-            label = "{:.2f}".format(y)
+    # for x, add, y in zip(pose_dope_df.index, pose_dope_df['add'], pose_dope_df['y']):
+    #     if count % 1 == 0:
+    #         label = "{:.2f}".format(y)
             
-            plt.annotate(label, # this is the text
-                        (x, add), # this is the point to label
-                        textcoords="offset points", # how to position the text
-                        xytext=(0,10), # distance from text to points (x,y)
-                        ha='center') # horizontal alignment can be left, right or center
-        count += 1
+    #         plt.annotate(label, # this is the text
+    #                     (x, add), # this is the point to label
+    #                     textcoords="offset points", # how to position the text
+    #                     xytext=(0,10), # distance from text to points (x,y)
+    #                     ha='center',
+    #                     fontweight=500, 
+    #                     fontsize=14) # horizontal alignment can be left, right or center
+    #     count += 1
+    count = 0
+    # for x, add, y in zip(pose_dope_df_o.index, pose_dope_df_o['add'], pose_dope_df_o['y']):
+    #     if count % 1 == 0:
+    #         label = "{:.2f}".format(y)
+            
+    #         plt.annotate(label, # this is the text
+    #                     (x, add), # this is the point to label
+    #                     textcoords="offset points", # how to position the text
+    #                     xytext=(0,10), # distance from text to points (x,y)
+    #                     ha='center') # horizontal alignment can be left, right or center
+    #     count += 1
     # plt.xticks(pose_dope_df.index)
     # plt.yticks(np.arange(0,0.02, 0.001))
-    plt.legend()
+    # plt.legend(prop={"weight" : 'bold'})
 
     # plt.figure()
     # plt.title("Z Coordinate")
