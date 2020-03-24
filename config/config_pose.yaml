@@ -3,25 +3,26 @@ topic_camera_info: "/dope/webcam/camera_info"
 topic_publishing: "dope"
 input_is_rectified: False   # Whether the input image is rectified (strongly suggested!)
 downscale_height: 400      # if the input image is larger than this, scale it down to this pixel height
+downsampling_leaf_size : 0.015
 
 # Comment any of these lines to prevent detection / pose estimation of that object
 weights: {
     # "cracker":"package://dope/weights/cracker_60.pth",
-    "003_cracker_box":"package://dope/weights/003_cracker_box_50k.pth",
+    # "003_cracker_box":"package://dope/weights/003_cracker_box_50k.pth",
     # "003_cracker_box":"package://dope/weights/003_cracker_box_30k.pth",
     # "gelatin":"package://dope/weights/gelatin_60.pth",
-    "010_potted_meat_can":"package://dope/weights/010_potted_meat_can_50k.pth",
-    "002_master_chef_can":"package://dope/weights/002_master_chef_can_50k.pth",
-    "006_mustard_bottle":"package://dope/weights/006_mustard_bottle_50k.pth",
-    "025_mug":"package://dope/weights/025_mug_50k.pth",
-    "024_bowl":"package://dope/weights/024_bowl_50k.pth",
+    # "010_potted_meat_can":"package://dope/weights/010_potted_meat_can_50k.pth",
+    # "002_master_chef_can":"package://dope/weights/002_master_chef_can_50k.pth",
+    # "006_mustard_bottle":"package://dope/weights/006_mustard_bottle_50k.pth",
+    # "025_mug":"package://dope/weights/025_mug_50k.pth",
+    # "024_bowl":"package://dope/weights/024_bowl_50k.pth",
     # "soup":"package://dope/weights/soup_60.pth",
-    # "pepsi_can":"package://dope/weights/pepsi_can_60k.pth",
+    "pepsi_can":"package://dope/weights/pepsi_can_60k.pth",
     # "coke_bottle":"package://dope/weights/coke_bottle_60k.pth",
-    # "coke_can":"package://dope/weights/coke_can_60k.pth",
+    "coke_can":"package://dope/weights/coke_can_60k.pth",
     # "sprite_bottle":"package://dope/weights/sprite_bottle_60k.pth",
-    # "sprite_can":"package://dope/weights/sprite_can_60k.pth",
-    # "7up_can":"package://dope/weights/7up_can_60k.pth",
+    "sprite_can":"package://dope/weights/sprite_can_60k.pth",
+    "7up_can":"package://dope/weights/7up_can_60k.pth",
     #"sugar":"package://dope/weights/sugar_60.pth"
     # "bleach":"package://dope/weights/bleach_28_dr.pth"
 }
@@ -44,7 +45,7 @@ dimensions: {
     "sprite_can": [8.7327995, 16.7596016, 8.7327995],
     "coke_can": [8.7327995, 16.7596016, 8.7327995],
     "7up_can": [8.7327995, 16.7596016, 8.7327995],
-    # "sprite_bottle": [9.5756035, 34.4509888, 9.5756035],
+    "sprite_bottle": [9.5756035, 34.4509888, 9.5756035],
     "coke_bottle": [9.5756035, 34.4509888, 9.5756035],
 }
 
@@ -104,6 +105,23 @@ meshes: {
 #    "soup":    "file://path/to/Dataset_Utilities/nvdu/data/ycb/aligned_cm/005_tomato_soup_can/google_16k/textured.obj",
 #    "sugar":   "file://path/to/Dataset_Utilities/nvdu/data/ycb/aligned_cm/004_sugar_box/google_16k/textured.obj",
 #    "bleach":  "file://path/to/Dataset_Utilities/nvdu/data/ycb/aligned_cm/021_bleach_cleanser/google_16k/textured.obj",
+}
+
+meshes_ply: {
+    "pepsi_can": "/media/aditya/A69AFABA9AFA85D9/Datasets/SameShape/turbosquid/models/pepsi_can/textured.ply",
+    "coke_can": "/media/aditya/A69AFABA9AFA85D9/Datasets/SameShape/turbosquid/models/coke_can/textured.ply",
+    "coke_bottle": "/media/aditya/A69AFABA9AFA85D9/Datasets/SameShape/turbosquid/models/coke_bottle/textured.ply",
+    "sprite_bottle": "/media/aditya/A69AFABA9AFA85D9/Datasets/SameShape/turbosquid/models/sprite_bottle/textured.ply",
+    "7up_can": "/media/aditya/A69AFABA9AFA85D9/Datasets/SameShape/turbosquid/models/7up_can/textured.ply",
+    "sprite_can": "/media/aditya/A69AFABA9AFA85D9/Datasets/SameShape/turbosquid/models/sprite_can/textured.ply",
+#    "cracker": "file://path/to/Dataset_Utilities/nvdu/data/ycb/aligned_cm/003_cracker_box/google_16k/textured.obj",
+#    "gelatin": "file://path/to/Dataset_Utilities/nvdu/data/ycb/aligned_cm/009_gelatin_box/google_16k/textured.obj",
+#    "meat":    "file://path/to/Dataset_Utilities/nvdu/data/ycb/aligned_cm/010_potted_meat_can/google_16k/textured.obj",
+#    "mustard": "/media/aditya/A69AFABA9AFA85D9/Datasets/YCB_Video_Dataset/aligned_cm/006_mustard_bottle/textured.ply",
+#    "soup":    "/media/aditya/A69AFABA9AFA85D9/Datasets/YCB_Video_Dataset/aligned_cm/005_tomato_soup_can/textured.ply",
+#    "sugar":   "/media/aditya/A69AFABA9AFA85D9/Datasets/YCB_Video_Dataset/aligned_cm/004_sugar_box/textured.ply",
+#    "bleach":  "file://path/to/Dataset_Utilities/nvdu/data/ycb/aligned_cm/021_bleach_cleanser/google_16k/textured.obj",
+#    "drill":  "/media/aditya/A69AFABA9AFA85D9/Datasets/YCB_Video_Dataset/aligned_cm/035_power_drill/textured.ply",
 }
 
 # optional: If the specified meshes are not in meters, provide a scale here (e.g. if the mesh is in centimeters, scale should be 0.01). default scale: 1.0.
